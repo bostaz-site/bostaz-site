@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bostaz — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e0c;
+      --surface: #161614;
+      --border: #252520;
+      --text: #e8e4d9;
+      --muted: #6b6b5e;
+      --accent: #d4a843;
+      --accent-dim: rgba(212,168,67,0.12);
+      --green: #4ecb71;
+      --green-dim: rgba(78,203,113,0.12);
+      --red: #e05555;
+      --red-dim: rgba(224,85,85,0.1);
+      --blue: #5b9cf6;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grain */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* Layout */
+    .layout { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-mark {
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--bg);
+      letter-spacing: -0.02em;
+    }
+
+    .logo-text {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .nav { display: flex; flex-direction: column; gap: 0.25rem; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .nav-item:hover { color: var(--text); background: var(--surface); }
+    .nav-item.active { color: var(--accent); background: var(--accent-dim); }
+
+    .nav-icon { font-size: 0.9rem; }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .account-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--muted);
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    /* Main */
+    .main { padding: 2rem 2.5rem; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+    }
+
+    .page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+    .page-date { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      border: 1px solid var(--border);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+    .dot.red { background: var(--red); }
+    .dot.yellow { background: var(--accent); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+      background: var(--bg);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      opacity: 0;
+      animation: fadeUp 0.5s ease forwards;
+    }
+
+    .kpi-card:nth-child(1) { animation-delay: 0.1s; }
+    .kpi-card:nth-child(2) { animation-delay: 0.2s; }
+    .kpi-card:nth-child(3) { animation-delay: 0.3s; }
+    .kpi-card:nth-child(4) { animation-delay: 0.4s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .kpi-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .kpi-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+
+    .kpi-value.accent { color: var(--accent); }
+    .kpi-value.green { color: var(--green); }
+
+    .kpi-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--muted);
+    }
+
+    /* Content grid */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .panel-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .panel-count {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    .panel-body { padding: 0; }
+
+    /* Booking row */
+    .booking-row {
+      display: grid;
+      grid-template-columns: 3rem 1fr auto;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.9rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      opacity: 0;
+      animation: fadeUp 0.4s ease forwards;
+      transition: background 0.15s;
+    }
+
+    .booking-row:last-child { border-bottom: none; }
+    .booking-row:hover { background: rgba(255,255,255,0.02); }
+
+    .booking-time {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .booking-info { display: flex; flex-direction: column; gap: 0.2rem; }
+
+    .booking-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .booking-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--muted);
+    }
+
+    .badge {
+      padding: 0.2rem 0.5rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .badge.confirmed { background: var(--green-dim); color: var(--green); }
+    .badge.pending { background: var(--accent-dim); color: var(--accent); }
+    .badge.cancelled { background: var(--red-dim); color: var(--red); }
+
+    /* Integration row */
+    .integration-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .integration-row:last-child { border-bottom: none; }
+
+    .integration-info { display: flex; flex-direction: column; gap: 0.2rem; }
+    .integration-name { font-size: 0.8rem; font-weight: 600; }
+    .integration-detail { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--muted); }
+
+    /* Log row */
+    .log-row {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+    }
+
+    .log-row:last-child { border-bottom: none; }
+
+    .log-time { color: var(--muted); white-space: nowrap; }
+    .log-state { color: var(--accent); }
+    .log-action { color: var(--text); }
+    .log-sender { color: var(--muted); }
+
+    /* Empty state */
+    .empty {
+      padding: 2rem;
+      text-align: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    /* Loading */
+    .loading {
+      padding: 1.5rem;
+      text-align: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 1px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Error */
+    .error-banner {
+      background: var(--red-dim);
+      border: 1px solid var(--red);
+      padding: 0.75rem 1rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--red);
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    /* Full width panel */
+    .panel.full { grid-column: 1 / -1; }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .content-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">B</div>
+      <div class="logo-text">Bostaz</div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-item active">
+        <span class="nav-icon">◈</span> Dashboard
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">◻</span> Bookings
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">◇</span> Conversations
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">○</span> Intégrations
+      </div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="account-badge" id="account-display">—</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Tableau de bord</div>
+        <div class="page-date" id="current-date">—</div>
+      </div>
+      <button class="refresh-btn" onclick="loadAll()">
+        ↺ Actualiser
+      </button>
+    </div>
+
+    <div class="error-banner" id="error-banner">⚠ Erreur de connexion Supabase. Vérifie tes paramètres.</div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="status-bar">
+      <div class="status-pill"><div class="dot"></div> Chargement...</div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">DMs reçus</div>
+        <div class="kpi-value" id="kpi-dms">—</div>
+        <div class="kpi-sub">total</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Slots proposés</div>
+        <div class="kpi-value accent" id="kpi-slots">—</div>
+        <div class="kpi-sub" id="kpi-slot-rate">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Bookings confirmés</div>
+        <div class="kpi-value green" id="kpi-bookings">—</div>
+        <div class="kpi-sub" id="kpi-booking-rate">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Aujourd'hui</div>
+        <div class="kpi-value" id="kpi-today">—</div>
+        <div class="kpi-sub">rendez-vous</div>
+      </div>
+    </div>
+
+    <!-- Content grid -->
+    <div class="content-grid">
+
+      <!-- Bookings aujourd'hui -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Rendez-vous du jour</div>
+          <div class="panel-count" id="bookings-count">—</div>
+        </div>
+        <div class="panel-body" id="bookings-list">
+          <div class="loading"><span class="spinner"></span> Chargement...</div>
+        </div>
+      </div>
+
+      <!-- Intégrations -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Intégrations</div>
+          <div class="panel-count" id="integrations-count">—</div>
+        </div>
+        <div class="panel-body" id="integrations-list">
+          <div class="loading"><span class="spinner"></span> Chargement...</div>
+        </div>
+      </div>
+
+      <!-- Logs récents -->
+      <div class="panel full">
+        <div class="panel-header">
+          <div class="panel-title">Activité récente</div>
+          <div class="panel-count" id="logs-count">—</div>
+        </div>
+        <div class="panel-body" id="logs-list">
+          <div class="loading"><span class="spinner"></span> Chargement...</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  // ── Config ─────────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://htlyhjdvqaqnqfdoqche.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0bHloamR2cWFxbnFmZG9xY2hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzU4NTgsImV4cCI6MjA4MzM1MTg1OH0.ycHxTm6FjICPrJ2eACneLdpGFNc8K5I1oVb9dhTh0fE';
+
+  // Get account_id from URL param
+  const params = new URLSearchParams(window.location.search);
+  const ACCOUNT_ID = params.get('account_id') ?? '';
+
+  // ── Init ───────────────────────────────────────────────────────────
+  document.getElementById('current-date').textContent = new Date().toLocaleDateString('fr-CA', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  document.getElementById('account-display').textContent = ACCOUNT_ID
+    ? 'ID: ' + ACCOUNT_ID.substring(0, 8) + '...'
+    : 'Aucun compte';
+
+  // ── Supabase fetch helper ──────────────────────────────────────────
+  async function query(table, params = '') {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!res.ok) throw new Error(`${table}: ${res.status}`);
+    return res.json();
+  }
+
+  async function rpc(fn, body = {}) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(`rpc/${fn}: ${res.status}`);
+    return res.json();
+  }
+
+  // ── Format helpers ─────────────────────────────────────────────────
+  function formatTime(iso) {
+    return new Date(iso).toLocaleTimeString('fr-CA', {
+      hour: '2-digit', minute: '2-digit', timeZone: 'America/Toronto'
+    });
+  }
+
+  function formatRelative(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'maintenant';
+    if (mins < 60) return `il y a ${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `il y a ${hrs}h`;
+    return new Date(iso).toLocaleDateString('fr-CA');
+  }
+
+  function stateColor(state) {
+    const map = {
+      idle: '#6b6b5e',
+      awaiting_time_choice: '#d4a843',
+      confirmed: '#4ecb71',
+      blocked: '#e05555',
+      needs_human: '#5b9cf6',
+      cancel_pending: '#e05555'
+    };
+    return map[state] ?? '#6b6b5e';
+  }
+
+  // ── Load KPIs ──────────────────────────────────────────────────────
+  async function loadKPIs() {
+    if (!ACCOUNT_ID) return;
+    try {
+      const kpis = await query('v_kpis', '?select=*&limit=1');
+      const k = kpis[0] ?? {};
+      document.getElementById('kpi-dms').textContent = k.dm_recus ?? '0';
+      document.getElementById('kpi-slots').textContent = k.slots_proposes ?? '0';
+      document.getElementById('kpi-bookings').textContent = k.bookings_crees ?? '0';
+      document.getElementById('kpi-slot-rate').textContent = (k.taux_slot_pct ?? 0) + '% des DMs';
+      document.getElementById('kpi-booking-rate').textContent = (k.taux_booking_pct ?? 0) + '% des slots';
+    } catch(e) {
+      console.error('KPIs:', e);
+    }
+  }
+
+  // ── Load bookings today ────────────────────────────────────────────
+  async function loadBookings() {
+    const el = document.getElementById('bookings-list');
+    if (!ACCOUNT_ID) { el.innerHTML = '<div class="empty">Aucun account_id dans l\'URL</div>'; return; }
+
+    const today = new Date().toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+    try {
+      const bookings = await query('bookings',
+        `?account_id=eq.${ACCOUNT_ID}&start_iso=gte.${today}T00:00:00Z&start_iso=lt.${tomorrow}T00:00:00Z&order=start_iso.asc&select=*`
+      );
+
+      document.getElementById('bookings-count').textContent = bookings.length + ' RDV';
+      document.getElementById('kpi-today').textContent = bookings.length;
+
+      if (bookings.length === 0) {
+        el.innerHTML = '<div class="empty">Aucun rendez-vous aujourd\'hui</div>';
+        return;
+      }
+
+      el.innerHTML = bookings.map((b, i) => `
+        <div class="booking-row" style="animation-delay:${i * 0.06}s">
+          <div class="booking-time">
+            ${formatTime(b.start_iso)}<br>
+            <span style="color:var(--muted);font-size:0.55rem">${formatTime(b.end_iso)}</span>
+          </div>
+          <div class="booking-info">
+            <div class="booking-name">${b.sender_id ?? '—'}</div>
+            <div class="booking-label">${b.label ?? '—'}</div>
+          </div>
+          <div class="badge ${b.status}">${b.status}</div>
+        </div>
+      `).join('');
+    } catch(e) {
+      el.innerHTML = '<div class="empty">Erreur de chargement</div>';
+    }
+  }
+
+  // ── Load integrations ──────────────────────────────────────────────
+  async function loadIntegrations() {
+    const el = document.getElementById('integrations-list');
+    if (!ACCOUNT_ID) { el.innerHTML = '<div class="empty">—</div>'; return; }
+
+    try {
+      const integrations = await query('integrations',
+        `?account_id=eq.${ACCOUNT_ID}&select=provider,status,updated_at,metadata`
+      );
+
+      document.getElementById('integrations-count').textContent = integrations.length;
+
+      const statusBar = document.getElementById('status-bar');
+      const pills = integrations.map(i => {
+        const dotClass = i.status === 'active' ? 'green' : i.status === 'needs_reconnect' ? 'red' : 'yellow';
+        const label = i.provider === 'google' ? 'Google Calendar' : 'Meta Instagram';
+        return `<div class="status-pill"><div class="dot ${dotClass}"></div> ${label}</div>`;
+      });
+      statusBar.innerHTML = pills.join('') || '<div class="status-pill"><div class="dot"></div> Aucune intégration</div>';
+
+      if (integrations.length === 0) {
+        el.innerHTML = '<div class="empty">Aucune intégration configurée</div>';
+        return;
+      }
+
+      el.innerHTML = integrations.map(i => {
+        const dotClass = i.status === 'active' ? 'green' : 'red';
+        const label = i.provider === 'google' ? '📅 Google Calendar' : '📸 Instagram';
+        const detail = i.status === 'active'
+          ? (i.metadata?.calendar_id ?? i.metadata?.page_name ?? 'Connecté')
+          : 'Reconnexion requise';
+        return `
+          <div class="integration-row">
+            <div class="integration-info">
+              <div class="integration-name">${label}</div>
+              <div class="integration-detail">${detail}</div>
+            </div>
+            <div class="badge ${i.status === 'active' ? 'confirmed' : 'cancelled'}">
+              ${i.status === 'active' ? 'actif' : 'erreur'}
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<div class="empty">Erreur de chargement</div>';
+    }
+  }
+
+  // ── Load logs ──────────────────────────────────────────────────────
+  async function loadLogs() {
+    const el = document.getElementById('logs-list');
+    if (!ACCOUNT_ID) { el.innerHTML = '<div class="empty">—</div>'; return; }
+
+    try {
+      const logs = await query('logs',
+        `?account_id=eq.${ACCOUNT_ID}&order=created_at.desc&limit=15&select=*`
+      );
+
+      document.getElementById('logs-count').textContent = logs.length + ' entrées';
+
+      if (logs.length === 0) {
+        el.innerHTML = '<div class="empty">Aucune activité enregistrée</div>';
+        return;
+      }
+
+      el.innerHTML = logs.map(l => `
+        <div class="log-row">
+          <span class="log-time">${formatRelative(l.created_at)}</span>
+          <span class="log-state" style="color:${stateColor(l.from_state ?? '')}">${l.from_state ?? '—'}</span>
+          <span style="color:var(--muted)">→</span>
+          <span class="log-state" style="color:${stateColor(l.to_state ?? '')}">${l.to_state ?? '—'}</span>
+          <span class="log-action">${l.action ?? '—'}</span>
+          <span class="log-sender">${l.sender_id ? '@' + l.sender_id.substring(0, 12) : ''}</span>
+        </div>
+      `).join('');
+    } catch(e) {
+      el.innerHTML = '<div class="empty">Erreur de chargement</div>';
+    }
+  }
+
+  // ── Load all ───────────────────────────────────────────────────────
+  async function loadAll() {
+    if (!ACCOUNT_ID) {
+      document.getElementById('error-banner').style.display = 'block';
+      document.getElementById('error-banner').textContent = '⚠ Aucun account_id dans l\'URL. Ajoute ?account_id=TON_UUID';
+      return;
+    }
+    await Promise.all([loadKPIs(), loadBookings(), loadIntegrations(), loadLogs()]);
+  }
+
+  // ── Boot ───────────────────────────────────────────────────────────
+  loadAll();
+
+  // Auto-refresh every 60 seconds
+  setInterval(loadAll, 60000);
+</script>
+
+</body>
+</html>
