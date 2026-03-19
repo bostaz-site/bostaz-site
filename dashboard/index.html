@@ -1446,9 +1446,9 @@ async function pollReply(since) {
     .select('text, created_at')
     .eq('account_id', accountId)
     .eq('direction', 'outbound')
-    .gt('created_at', since)
     .order('created_at', { ascending: false })
     .limit(1);
+  console.log('Polling... found:', JSON.stringify(data));
   return data?.[0]?.text ?? null;
 }
 
@@ -1480,6 +1480,7 @@ async function sendChatMsg() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    console.log('Sent at:', sentAt, '| account_id:', accountId);
   } catch (e) {
     document.getElementById('chat-typing')?.remove();
     appendBubble(msgs, 'bot', `<span style="color:var(--red)">Erreur réseau: ${escHtml(e.message)}</span>`, chatTime());
