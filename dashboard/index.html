@@ -1488,12 +1488,11 @@ async function sendChatMsg() {
     return;
   }
 
-  // Wait 3s then poll Supabase for outbound reply
-  await new Promise(r => setTimeout(r, 3000));
+  // Wait 5s then poll every 2s up to 15s total
+  await new Promise(r => setTimeout(r, 5000));
   let reply = await pollReply(sentAt);
-
-  // Retry once after 2 more seconds if nothing yet
-  if (!reply) {
+  const deadline = Date.now() + 10000; // 10s more = 15s total
+  while (!reply && Date.now() < deadline) {
     await new Promise(r => setTimeout(r, 2000));
     reply = await pollReply(sentAt);
   }
