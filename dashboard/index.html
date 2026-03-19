@@ -40,23 +40,17 @@ input, textarea, select { font-family: var(--mono); }
 ::-webkit-scrollbar-track { background: var(--bg2); }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
-/* ─── Auth Screen ──────────────────────────────────────────────────────── */
+/* ─── Invalid Link Screen ──────────────────────────────────────────────── */
 #auth-screen {
   display: flex; align-items: center; justify-content: center;
   min-height: 100vh; padding: 24px;
 }
 .auth-card {
   background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2);
-  padding: 48px 40px; width: 100%; max-width: 420px;
+  padding: 48px 40px; width: 100%; max-width: 420px; text-align: center;
 }
 .auth-logo { font-size: 28px; font-weight: 800; color: var(--gold); margin-bottom: 8px; letter-spacing: -0.5px; }
 .auth-tagline { color: var(--text2); font-size: 13px; margin-bottom: 40px; font-family: var(--mono); }
-.auth-tab-row { display: flex; gap: 0; margin-bottom: 28px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.auth-tab {
-  flex: 1; padding: 9px; background: transparent; border: none; color: var(--text2);
-  font-family: var(--head); font-size: 13px; font-weight: 500; transition: all .2s;
-}
-.auth-tab.active { background: var(--gold-bg); color: var(--gold); }
 .auth-form { display: flex; flex-direction: column; gap: 14px; }
 .field-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
 .field-input {
@@ -373,33 +367,13 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
 <!-- ─── Sidebar overlay (mobile) ────────────────────────────────────────── -->
 <div id="sidebar-overlay"></div>
 
-<!-- ─── Auth Screen ──────────────────────────────────────────────────────── -->
-<div id="auth-screen">
+<!-- ─── Invalid Link Screen ──────────────────────────────────────────────── -->
+<div id="auth-screen" class="hidden">
   <div class="auth-card">
     <div class="auth-logo">Bostaz</div>
     <div class="auth-tagline">Dashboard · Réservations Instagram</div>
-    <div class="auth-tab-row">
-      <button class="auth-tab active" onclick="switchAuthTab('magic')">Lien magique</button>
-      <button class="auth-tab" onclick="switchAuthTab('password')">Mot de passe</button>
-    </div>
-    <div class="auth-form" id="auth-magic-form">
-      <div>
-        <div class="field-label">Email</div>
-        <input type="email" class="field-input" id="magic-email" placeholder="vous@salon.com" autocomplete="email">
-      </div>
-      <button class="btn-primary" id="magic-btn" onclick="sendMagicLink()">Envoyer le lien</button>
-      <div id="magic-message" style="display:none"></div>
-    </div>
-    <div class="auth-form hidden" id="auth-password-form">
-      <div>
-        <div class="field-label">Email</div>
-        <input type="email" class="field-input" id="pw-email" placeholder="vous@salon.com" autocomplete="email">
-      </div>
-      <div>
-        <div class="field-label">Mot de passe</div>
-        <input type="password" class="field-input" id="pw-pass" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <button class="btn-primary" id="pw-btn" onclick="signInWithPassword()">Se connecter</button>
+    <div style="margin-top:8px;padding:20px;background:rgba(224,85,85,0.1);border:1px solid rgba(224,85,85,0.3);border-radius:var(--radius);color:var(--text2);font-size:14px;line-height:1.7">
+      Lien invalide — contacte le support Bostaz.
     </div>
   </div>
 </div>
@@ -438,7 +412,6 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
     </div>
     <div class="sidebar-footer">
       <div class="user-info" id="user-email-display">—</div>
-      <button class="btn-ghost" onclick="signOut()">Déconnexion</button>
     </div>
   </nav>
 
@@ -471,7 +444,7 @@ const N8N_BASE = 'https://samy30.app.n8n.cloud/webhook';
 const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let currentUser = null;       // Supabase user object
+let accountId   = null;       // account_id from URL param
 let botConfig   = null;       // Current bot_config row
 let saveTimer   = null;       // Debounce timer for auto-save
 let currentPage = 'apercu';   // Active nav page
@@ -535,58 +508,18 @@ document.getElementById('sidebar-overlay').addEventListener('click', () => {
    AUTH
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/** Switch between magic-link and password auth tabs */
-function switchAuthTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (tab === 'magic') === (i === 0)));
-  document.getElementById('auth-magic-form').classList.toggle('hidden', tab !== 'magic');
-  document.getElementById('auth-password-form').classList.toggle('hidden', tab !== 'password');
-}
-
-/** Send a magic link email */
-async function sendMagicLink() {
-  const email = document.getElementById('magic-email').value.trim();
-  if (!email) { toast('Veuillez entrer votre email.', 'error'); return; }
-  const btn = document.getElementById('magic-btn');
-  btn.disabled = true; btn.textContent = 'Envoi…';
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
-  btn.disabled = false; btn.textContent = 'Envoyer le lien';
-  if (error) { toast('Erreur: ' + error.message, 'error'); return; }
-  const msgEl = document.getElementById('magic-message');
-  msgEl.style.display = 'block';
-  msgEl.innerHTML = `<div class="auth-message">✉ Vérifiez votre email — un lien de connexion vous a été envoyé à <strong>${email}</strong></div>`;
-}
-
-/** Sign in with email + password */
-async function signInWithPassword() {
-  const email = document.getElementById('pw-email').value.trim();
-  const pass  = document.getElementById('pw-pass').value;
-  if (!email || !pass) { toast('Email et mot de passe requis.', 'error'); return; }
-  const btn = document.getElementById('pw-btn');
-  btn.disabled = true; btn.textContent = 'Connexion…';
-  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-  btn.disabled = false; btn.textContent = 'Se connecter';
-  if (error) toast('Erreur: ' + error.message, 'error');
-}
-
-/** Sign out */
-async function signOut() {
-  await sb.auth.signOut();
-  currentUser = null; botConfig = null;
-  showAuth();
-}
-
-/** Show auth screen, hide app */
-function showAuth() {
+/** Show invalid link screen */
+function showInvalidLink() {
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('app').classList.add('hidden');
 }
 
-/** Show app, hide auth screen */
-function showApp(user) {
-  currentUser = user;
+/** Show app */
+function showApp(aid) {
+  accountId = aid;
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
-  document.getElementById('user-email-display').textContent = user.email ?? user.id;
+  document.getElementById('user-email-display').textContent = aid.slice(0, 8) + '…';
   loadAll();
 }
 
@@ -594,9 +527,9 @@ function showApp(user) {
    DATA LOADING
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/** Load bot_config for current user, creating a default row if missing */
+/** Load bot_config for current account, creating a default row if missing */
 async function loadBotConfig() {
-  const uid = currentUser.id;
+  const uid = accountId;
   const { data, error } = await sb.from('bot_config').select('*').eq('account_id', uid).maybeSingle();
   if (error) { console.error('loadBotConfig error', error); return null; }
   if (!data) {
@@ -653,8 +586,8 @@ function setSaveStatus(state) {
 
 /** Persist a partial patch to Supabase */
 async function saveBotConfig(patch) {
-  if (!currentUser) return;
-  const uid = currentUser.id;
+  if (!accountId) return;
+  const uid = accountId;
   const { error } = await sb.from('bot_config').update(patch).eq('account_id', uid);
   if (error) {
     console.error('saveBotConfig error', error);
@@ -700,7 +633,7 @@ function navigate(page) {
 
 async function renderApercu(container) {
   container.innerHTML = `<div class="empty-state"><span class="spinner"></span></div>`;
-  const uid = currentUser.id;
+  const uid = accountId;
 
   // Fetch stats in parallel
   const now = new Date();
@@ -1314,7 +1247,7 @@ async function deleteFaq(id) {
 
 async function renderIntegrations(container) {
   container.innerHTML = `<div class="empty-state"><span class="spinner"></span></div>`;
-  const uid = currentUser.id;
+  const uid = accountId;
   const { data: integrations } = await sb.from('integrations').select('*').eq('account_id', uid);
   const ig = (integrations ?? []).find(i => i.platform === 'instagram');
   const gc = (integrations ?? []).find(i => i.platform === 'google');
@@ -1397,10 +1330,10 @@ async function renderIntegrations(container) {
 }
 
 function connectInstagram() {
-  window.location.href = `/webhook/f09a-meta-oauth?account_id=${currentUser.id}`;
+  window.location.href = `/webhook/f09a-meta-oauth?account_id=${accountId}`;
 }
 function connectGoogle() {
-  window.location.href = `/webhook/f10a-google-oauth?account_id=${currentUser.id}`;
+  window.location.href = `/webhook/f10a-google-oauth?account_id=${accountId}`;
 }
 
 async function sendChatMsg() {
@@ -1419,7 +1352,7 @@ async function sendChatMsg() {
     const res = await fetch(`${N8N_BASE}/f14-dm-engine`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account_id: currentUser.id, sender_id: 'dashboard-test', message: msg })
+      body: JSON.stringify({ account_id: accountId, sender_id: 'dashboard-test', message: msg })
     });
     const text = await res.text();
     let display;
@@ -1491,28 +1424,18 @@ function bindChange(id, fn) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   INIT — Auth state machine
+   INIT
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/** Bootstrap: check session, handle magic link hash, subscribe to auth events */
-async function init() {
-  // Check for existing session
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    showApp(session.user);
+/** Bootstrap: read account_id from URL, show app or invalid-link screen */
+function init() {
+  const params = new URLSearchParams(window.location.search);
+  const aid = params.get('account_id');
+  if (!aid || !/^[0-9a-f-]{36}$/i.test(aid)) {
+    showInvalidLink();
   } else {
-    showAuth();
+    showApp(aid);
   }
-
-  // Listen for auth state changes (magic link redirect, sign-out, etc.)
-  sb.auth.onAuthStateChange((_event, session) => {
-    if (session) {
-      showApp(session.user);
-    } else {
-      currentUser = null; botConfig = null;
-      showAuth();
-    }
-  });
 }
 
 // Start app
