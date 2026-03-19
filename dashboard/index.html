@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 /* ─── Reset & Base ─────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -468,8 +467,60 @@ const SUPA_URL = 'https://htlyhjdvqaqnqfdoqche.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0bHloamR2cWFxbnFmZG9xY2hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzU4NTgsImV4cCI6MjA4MzM1MTg1OH0.GUlMBJFmFGIDsNGDkADhNKKpUVuD5lBVE1JI_RLg0KM';
 const N8N_BASE = 'https://samy30.app.n8n.cloud/webhook';
 
+// ─── Supabase REST helpers ────────────────────────────────────────────────────
+const SUPA_HEADERS = {
+  'apikey': SUPA_KEY,
+  'Authorization': 'Bearer ' + SUPA_KEY,
+  'Content-Type': 'application/json',
+};
+
+async function supaGet(table, params) {
+  const url = SUPA_URL + '/rest/v1/' + table + '?' + params;
+  const r = await fetch(url, { headers: SUPA_HEADERS });
+  const data = await r.json();
+  if (!r.ok) return { data: null, error: data };
+  return { data: Array.isArray(data) ? data : [data], error: null };
+}
+
+async function supaGetSingle(table, params) {
+  const r = await supaGet(table, params);
+  return { data: r.data?.[0] ?? null, error: r.error };
+}
+
+async function supaGetCount(table, params) {
+  const url = SUPA_URL + '/rest/v1/' + table + '?' + params;
+  const r = await fetch(url, { headers: { ...SUPA_HEADERS, 'Prefer': 'count=exact' } });
+  const count = parseInt(r.headers.get('content-range')?.split('/')[1] ?? '0', 10);
+  if (!r.ok) { const e = await r.json(); return { count: 0, error: e }; }
+  await r.json(); // drain
+  return { count: isNaN(count) ? 0 : count, error: null };
+}
+
+async function supaInsert(table, body) {
+  const url = SUPA_URL + '/rest/v1/' + table;
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { ...SUPA_HEADERS, 'Prefer': 'return=representation' },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json();
+  if (!r.ok) return { data: null, error: data };
+  return { data: Array.isArray(data) ? data[0] : data, error: null };
+}
+
+async function supaUpdate(table, params, body) {
+  const url = SUPA_URL + '/rest/v1/' + table + '?' + params;
+  const r = await fetch(url, {
+    method: 'PATCH',
+    headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) { const e = await r.json(); return { error: e }; }
+  return { error: null };
+}
+
+
 // ─── Supabase client ──────────────────────────────────────────────────────────
-const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let accountId   = null;       // account_id from URL param
@@ -558,7 +609,7 @@ function showApp(aid) {
 /** Load bot_config for current account, creating a default row if missing */
 async function loadBotConfig() {
   const uid = accountId;
-  const { data, error } = await sb.from('bot_config').select('*').eq('account_id', uid).maybeSingle();
+  const { data, error } = await supaGetSingle('bot_config', 'account_id=eq.' + uid + '&select=*');
   if (error) { console.error('loadBotConfig error', error); return null; }
   if (!data) {
     // Insert default row
@@ -573,7 +624,7 @@ async function loadBotConfig() {
       slots_to_propose: 3, slot_duration: 30, same_day_booking_allowed: false,
       services: [], staff: [], faq: []
     };
-    const { data: inserted, error: ie } = await sb.from('bot_config').insert(defaults).select().single();
+    const { data: inserted, error: ie } = await supaInsert('bot_config', defaults);
     if (ie) { console.error('insert bot_config error', ie); return defaults; }
     return inserted;
   }
@@ -616,7 +667,7 @@ function setSaveStatus(state) {
 async function saveBotConfig(patch) {
   if (!accountId) return;
   const uid = accountId;
-  const { error } = await sb.from('bot_config').update(patch).eq('account_id', uid);
+  const { error } = await supaUpdate('bot_config', 'account_id=eq.' + uid, patch);
   if (error) {
     console.error('saveBotConfig error', error);
     setSaveStatus('');
@@ -670,11 +721,11 @@ async function renderApercu(container) {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
   const [bookingsRes, convRes, remindersRes, integrationsRes, recentRes] = await Promise.all([
-    sb.from('bookings').select('id', { count: 'exact', head: true }).eq('account_id', uid).gte('created_at', monthStart),
-    sb.from('conversations').select('id', { count: 'exact', head: true }).eq('account_id', uid).not('state', 'in', '("blocked","confirmed")'),
-    sb.from('lead_events').select('id', { count: 'exact', head: true }).eq('account_id', uid).eq('event_type', 'reminder_sent').gte('created_at', monthStart),
-    sb.from('integrations').select('platform, status').eq('account_id', uid),
-    sb.from('bookings').select('sender_id, service_name, start_time, status').eq('account_id', uid).order('created_at', { ascending: false }).limit(5)
+    supaGetCount('bookings', 'account_id=eq.' + uid + '&created_at=gte.' + monthStart + '&select=id'),
+    supaGetCount('conversations', 'account_id=eq.' + uid + '&state=not.in.(blocked,confirmed)&select=id'),
+    supaGetCount('lead_events', 'account_id=eq.' + uid + '&event_type=eq.reminder_sent&created_at=gte.' + monthStart + '&select=id'),
+    supaGet('integrations', 'account_id=eq.' + uid + '&select=platform,status'),
+    supaGet('bookings', 'account_id=eq.' + uid + '&select=sender_id,service_name,start_time,status&order=created_at.desc&limit=5'),
   ]);
 
   const bookingCount  = bookingsRes.count  ?? 0;
@@ -1278,7 +1329,7 @@ async function deleteFaq(id) {
 async function renderIntegrations(container) {
   container.innerHTML = `<div class="empty-state"><span class="spinner"></span></div>`;
   const uid = accountId;
-  const { data: integrations } = await sb.from('integrations').select('*').eq('account_id', uid);
+  const { data: integrations } = await supaGet('integrations', 'account_id=eq.' + uid + '&select=*');
   const ig = (integrations ?? []).find(i => i.platform === 'instagram');
   const gc = (integrations ?? []).find(i => i.platform === 'google');
 
@@ -1441,13 +1492,10 @@ function resetConversation() {
 
 /** Poll Supabase for the latest outbound message sent after `since` */
 async function pollReply(since) {
-  const { data } = await sb
-    .from('messages')
-    .select('text, created_at')
-    .eq('account_id', accountId)
-    .eq('direction', 'outbound')
-    .order('created_at', { ascending: false })
-    .limit(1);
+  const { data } = await supaGet(
+    'messages',
+    'account_id=eq.' + accountId + '&direction=eq.outbound&select=text,created_at&order=created_at.desc&limit=1'
+  );
   console.log('Polling... found:', JSON.stringify(data));
   return data?.[0]?.text ?? null;
 }
