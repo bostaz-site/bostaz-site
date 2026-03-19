@@ -1494,7 +1494,7 @@ function resetConversation() {
 async function pollReply(since) {
   const { data } = await supaGet(
     'messages',
-    'account_id=eq.' + accountId + '&direction=eq.outbound&select=text,created_at&order=created_at.desc&limit=1'
+    'account_id=eq.' + accountId + '&direction=eq.outbound&created_at=gt.' + encodeURIComponent(since) + '&select=text,created_at&order=created_at.desc&limit=1'
   );
   console.log('Polling... found:', JSON.stringify(data));
   return data?.[0]?.text ?? null;
