@@ -1439,13 +1439,12 @@ function resetConversation() {
   `;
 }
 
-/** Poll Supabase for the latest outbound message to testSenderId sent after `since` */
+/** Poll Supabase for the latest outbound message sent after `since` */
 async function pollReply(since) {
   const { data } = await sb
     .from('messages')
     .select('text, created_at')
     .eq('account_id', accountId)
-    .eq('sender_id', testSenderId)
     .eq('direction', 'outbound')
     .gt('created_at', since)
     .order('created_at', { ascending: false })
