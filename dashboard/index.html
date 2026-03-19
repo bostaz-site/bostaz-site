@@ -1,752 +1,1522 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bostaz — Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bostaz — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+/* ─── Reset & Base ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #0a0a0a;
+  --bg2:      #111111;
+  --bg3:      #1a1a1a;
+  --bg4:      #222222;
+  --border:   #2a2a2a;
+  --border2:  #333333;
+  --gold:     #d4a843;
+  --gold-dim: #a07828;
+  --gold-bg:  rgba(212,168,67,0.08);
+  --text:     #e8e8e8;
+  --text2:    #999999;
+  --text3:    #555555;
+  --red:      #e05555;
+  --green:    #4caf6e;
+  --sidebar:  240px;
+  --radius:   8px;
+  --radius2:  12px;
+  --mono:     'DM Mono', monospace;
+  --head:     'Syne', sans-serif;
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--head); font-size: 14px; line-height: 1.5; }
+a { color: var(--gold); text-decoration: none; }
+button { cursor: pointer; font-family: var(--head); }
+input, textarea, select { font-family: var(--mono); }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
-    :root {
-      --bg: #0e0e0c;
-      --surface: #161614;
-      --border: #252520;
-      --text: #e8e4d9;
-      --muted: #6b6b5e;
-      --accent: #d4a843;
-      --accent-dim: rgba(212,168,67,0.12);
-      --green: #4ecb71;
-      --green-dim: rgba(78,203,113,0.12);
-      --red: #e05555;
-      --red-dim: rgba(224,85,85,0.1);
-      --blue: #5b9cf6;
-    }
+/* ─── Auth Screen ──────────────────────────────────────────────────────── */
+#auth-screen {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 24px;
+}
+.auth-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2);
+  padding: 48px 40px; width: 100%; max-width: 420px;
+}
+.auth-logo { font-size: 28px; font-weight: 800; color: var(--gold); margin-bottom: 8px; letter-spacing: -0.5px; }
+.auth-tagline { color: var(--text2); font-size: 13px; margin-bottom: 40px; font-family: var(--mono); }
+.auth-tab-row { display: flex; gap: 0; margin-bottom: 28px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.auth-tab {
+  flex: 1; padding: 9px; background: transparent; border: none; color: var(--text2);
+  font-family: var(--head); font-size: 13px; font-weight: 500; transition: all .2s;
+}
+.auth-tab.active { background: var(--gold-bg); color: var(--gold); }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.field-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+.field-input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 11px 14px; color: var(--text); font-size: 14px; outline: none; transition: border-color .2s;
+}
+.field-input:focus { border-color: var(--gold); }
+.btn-primary {
+  background: var(--gold); color: #0a0a0a; border: none; border-radius: var(--radius);
+  padding: 12px 20px; font-size: 14px; font-weight: 700; font-family: var(--head);
+  transition: opacity .2s; letter-spacing: 0.3px;
+}
+.btn-primary:hover { opacity: 0.88; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.auth-message { text-align: center; color: var(--text2); font-size: 13px; padding: 12px; background: var(--gold-bg); border-radius: var(--radius); border: 1px solid rgba(212,168,67,0.2); }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Syne', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+/* ─── App Layout ───────────────────────────────────────────────────────── */
+#app { display: flex; min-height: 100vh; }
+#app.hidden, #auth-screen.hidden { display: none !important; }
 
-    /* Grain */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 999;
-    }
+/* ─── Sidebar ──────────────────────────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar); background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh;
+  z-index: 100; transition: transform .3s;
+}
+.sidebar-logo { padding: 28px 24px 20px; border-bottom: 1px solid var(--border); }
+.sidebar-logo-text { font-size: 22px; font-weight: 800; color: var(--gold); letter-spacing: -0.5px; }
+.sidebar-logo-sub { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+.sidebar-nav { flex: 1; padding: 16px 0; overflow-y: auto; }
+.nav-item {
+  display: flex; align-items: center; gap: 11px; padding: 10px 24px;
+  color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: all .15s; border-left: 2px solid transparent; user-select: none;
+}
+.nav-item:hover { color: var(--text); background: var(--bg3); }
+.nav-item.active { color: var(--gold); background: var(--gold-bg); border-left-color: var(--gold); }
+.nav-icon { font-size: 15px; width: 18px; text-align: center; }
+.sidebar-footer { padding: 16px 24px; border-top: 1px solid var(--border); }
+.user-info { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 10px; word-break: break-all; }
+.btn-ghost {
+  background: transparent; border: 1px solid var(--border2); color: var(--text2);
+  border-radius: var(--radius); padding: 7px 14px; font-size: 12px; font-family: var(--head);
+  transition: all .2s; width: 100%;
+}
+.btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
 
-    /* Layout */
-    .layout { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+/* ─── Main Content ─────────────────────────────────────────────────────── */
+#main { margin-left: var(--sidebar); flex: 1; min-height: 100vh; }
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px; height: 60px; border-bottom: 1px solid var(--border);
+  background: var(--bg); position: sticky; top: 0; z-index: 50;
+}
+.topbar-title { font-size: 16px; font-weight: 700; }
+.hamburger { display: none; background: none; border: none; color: var(--text); font-size: 20px; padding: 4px; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.save-status { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+.save-status.saving { color: var(--gold); }
+.save-status.saved { color: var(--green); }
+.page-content { padding: 32px; max-width: 960px; }
 
-    /* Sidebar */
-    .sidebar {
-      border-right: 1px solid var(--border);
-      padding: 2rem 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-    }
+/* ─── Section titles ───────────────────────────────────────────────────── */
+.section-header { margin-bottom: 28px; }
+.section-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.section-subtitle { color: var(--text2); font-size: 13px; font-family: var(--mono); }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
+/* ─── Cards ────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2);
+  padding: 20px 24px;
+}
+.card-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; }
 
-    .logo-mark {
-      width: 32px;
-      height: 32px;
-      background: var(--accent);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      font-weight: 800;
-      color: var(--bg);
-      letter-spacing: -0.02em;
-    }
+/* ─── Stats grid ───────────────────────────────────────────────────────── */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); padding: 20px 22px; }
+.stat-label { font-size: 11px; color: var(--text2); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+.stat-value { font-size: 32px; font-weight: 700; color: var(--gold); font-family: var(--mono); line-height: 1; }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: var(--mono); }
 
-    .logo-text {
-      font-size: 1.1rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
+/* ─── Bot status ───────────────────────────────────────────────────────── */
+.bot-status-row { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
+  border-radius: 20px; font-size: 12px; font-weight: 600; font-family: var(--mono);
+}
+.badge-active { background: rgba(76,175,110,0.15); color: var(--green); border: 1px solid rgba(76,175,110,0.3); }
+.badge-inactive { background: rgba(153,153,153,0.1); color: var(--text3); border: 1px solid var(--border); }
+.badge-error { background: rgba(224,85,85,0.12); color: var(--red); border: 1px solid rgba(224,85,85,0.25); }
+.badge-pending { background: rgba(212,168,67,0.1); color: var(--gold); border: 1px solid rgba(212,168,67,0.25); }
+.badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
-    .nav { display: flex; flex-direction: column; gap: 0.25rem; }
+/* ─── Integration cards ────────────────────────────────────────────────── */
+.integration-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.integration-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); padding: 20px; }
+.integration-icon { font-size: 22px; margin-bottom: 10px; }
+.integration-name { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.integration-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 14px; }
+.btn-sm {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+  border-radius: var(--radius); padding: 7px 14px; font-size: 12px; font-family: var(--head);
+  font-weight: 500; transition: all .2s;
+}
+.btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+.btn-danger {
+  background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.25); color: var(--red);
+  border-radius: var(--radius); padding: 7px 14px; font-size: 12px; font-family: var(--head);
+  font-weight: 500; transition: all .2s;
+}
+.btn-danger:hover { background: rgba(224,85,85,0.18); }
 
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.6rem 0.75rem;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.15s ease;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-    }
+/* ─── Table ────────────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; }
+th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.6px; background: var(--bg3); border-bottom: 1px solid var(--border); }
+td { padding: 11px 16px; font-size: 13px; font-family: var(--mono); border-bottom: 1px solid var(--border); color: var(--text2); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg3); }
+.status-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.status-confirmed { background: rgba(76,175,110,0.15); color: var(--green); }
+.status-pending { background: rgba(212,168,67,0.12); color: var(--gold); }
+.status-cancelled { background: rgba(224,85,85,0.12); color: var(--red); }
 
-    .nav-item:hover { color: var(--text); background: var(--surface); }
-    .nav-item.active { color: var(--accent); background: var(--accent-dim); }
+/* ─── Toggle ───────────────────────────────────────────────────────────── */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.toggle-row:last-child { border-bottom: none; }
+.toggle-info { flex: 1; }
+.toggle-label { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+.toggle-desc { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+.toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; margin-left: 16px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track {
+  position: absolute; inset: 0; background: var(--bg4); border-radius: 12px;
+  cursor: pointer; transition: background .2s; border: 1px solid var(--border2);
+}
+.toggle-track::after {
+  content: ''; position: absolute; left: 3px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; border-radius: 50%; background: var(--text3); transition: all .2s;
+}
+.toggle-switch input:checked + .toggle-track { background: var(--gold-dim); border-color: var(--gold); }
+.toggle-switch input:checked + .toggle-track::after { left: 23px; background: var(--gold); }
+/* Large toggle */
+.toggle-switch.lg { width: 56px; height: 30px; }
+.toggle-switch.lg .toggle-track::after { width: 20px; height: 20px; left: 4px; }
+.toggle-switch.lg input:checked + .toggle-track::after { left: 30px; }
 
-    .nav-icon { font-size: 0.9rem; }
+/* ─── Form fields ──────────────────────────────────────────────────────── */
+.form-group { margin-bottom: 18px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+.field-textarea {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 11px 14px; color: var(--text); font-size: 13px; outline: none; transition: border-color .2s;
+  resize: vertical; min-height: 90px;
+}
+.field-textarea:focus { border-color: var(--gold); }
+.field-select {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; transition: border-color .2s;
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.field-select:focus { border-color: var(--gold); }
+.field-number {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; transition: border-color .2s;
+}
+.field-number:focus { border-color: var(--gold); }
+input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
 
-    .sidebar-bottom {
-      margin-top: auto;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border);
-    }
+/* ─── Segmented control ────────────────────────────────────────────────── */
+.segmented { display: flex; gap: 0; border: 1px solid var(--border2); border-radius: var(--radius); overflow: hidden; width: fit-content; }
+.seg-btn { background: transparent; border: none; color: var(--text2); padding: 8px 18px; font-size: 13px; font-family: var(--mono); font-weight: 400; transition: all .15s; }
+.seg-btn:hover { color: var(--text); background: var(--bg3); }
+.seg-btn.active { background: var(--gold-bg); color: var(--gold); font-weight: 500; }
 
-    .account-badge {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.6rem;
-      color: var(--muted);
-      word-break: break-all;
-      line-height: 1.5;
-    }
+/* ─── Day checkboxes ───────────────────────────────────────────────────── */
+.days-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.day-check { position: relative; }
+.day-check input { position: absolute; opacity: 0; width: 0; height: 0; }
+.day-check label {
+  display: flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: var(--radius); background: var(--bg3);
+  border: 1px solid var(--border2); color: var(--text2); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all .15s; user-select: none;
+}
+.day-check input:checked + label { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); }
 
-    /* Main */
-    .main { padding: 2rem 2.5rem; }
+/* ─── JSONB item cards ─────────────────────────────────────────────────── */
+.items-grid { display: grid; gap: 12px; margin-bottom: 16px; }
+.item-card {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius2);
+  padding: 16px 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+.item-info { flex: 1; min-width: 0; }
+.item-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-meta { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+.item-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.btn-icon { background: transparent; border: 1px solid var(--border); color: var(--text3); border-radius: 6px; padding: 5px 8px; font-size: 13px; transition: all .15s; }
+.btn-icon:hover { border-color: var(--gold); color: var(--gold); }
+.btn-icon.delete:hover { border-color: var(--red); color: var(--red); }
+.btn-add {
+  display: flex; align-items: center; gap: 8px; background: var(--gold-bg); border: 1px dashed var(--gold-dim);
+  color: var(--gold); border-radius: var(--radius2); padding: 12px 18px; font-size: 13px;
+  font-family: var(--head); font-weight: 500; transition: all .2s; width: 100%;
+}
+.btn-add:hover { background: rgba(212,168,67,0.14); border-color: var(--gold); }
 
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 2.5rem;
-    }
+/* ─── Modal ────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  backdrop-filter: blur(2px);
+}
+.modal-overlay.hidden { display: none !important; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius2);
+  padding: 28px; width: 100%; max-width: 480px; position: relative; max-height: 90vh; overflow-y: auto;
+}
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 22px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+.btn-cancel { background: var(--bg3); border: 1px solid var(--border2); color: var(--text2); border-radius: var(--radius); padding: 9px 16px; font-size: 13px; font-family: var(--head); transition: all .2s; }
+.btn-cancel:hover { border-color: var(--border2); color: var(--text); }
 
-    .page-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
-    .page-date { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+/* ─── FAQ ──────────────────────────────────────────────────────────────── */
+.faq-card {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius2);
+  margin-bottom: 10px; overflow: hidden;
+}
+.faq-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; cursor: pointer; }
+.faq-header:hover { background: var(--bg4); }
+.faq-q { font-size: 14px; font-weight: 500; flex: 1; }
+.faq-chevron { color: var(--text3); font-size: 12px; transition: transform .2s; }
+.faq-card.open .faq-chevron { transform: rotate(90deg); }
+.faq-body { padding: 0 18px 16px; display: none; }
+.faq-card.open .faq-body { display: block; }
+.faq-a { font-size: 13px; color: var(--text2); font-family: var(--mono); line-height: 1.6; margin-bottom: 8px; }
+.faq-examples { font-size: 11px; color: var(--text3); font-family: var(--mono); }
 
-    .refresh-btn {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.65rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
+/* ─── Chat ─────────────────────────────────────────────────────────────── */
+.chat-container { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius2); overflow: hidden; }
+.chat-messages { height: 320px; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.chat-msg { max-width: 80%; }
+.chat-msg.user { align-self: flex-end; }
+.chat-msg.bot { align-self: flex-start; }
+.chat-bubble {
+  padding: 10px 14px; border-radius: 12px; font-size: 13px; font-family: var(--mono); line-height: 1.5;
+}
+.chat-msg.user .chat-bubble { background: var(--gold-dim); color: #0a0a0a; border-bottom-right-radius: 3px; }
+.chat-msg.bot .chat-bubble { background: var(--bg4); color: var(--text); border-bottom-left-radius: 3px; border: 1px solid var(--border); }
+.chat-msg.bot .chat-bubble pre { font-family: var(--mono); font-size: 11px; white-space: pre-wrap; word-break: break-all; color: var(--text2); }
+.chat-input-row { display: flex; gap: 0; border-top: 1px solid var(--border); }
+.chat-input {
+  flex: 1; background: transparent; border: none; outline: none; padding: 13px 16px;
+  color: var(--text); font-size: 13px; font-family: var(--mono);
+}
+.chat-send { background: var(--gold); color: #0a0a0a; border: none; padding: 10px 18px; font-size: 13px; font-weight: 700; font-family: var(--head); transition: opacity .2s; }
+.chat-send:hover { opacity: 0.88; }
 
-    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* ─── Toast ────────────────────────────────────────────────────────────── */
+#toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column-reverse; gap: 8px; }
+.toast {
+  display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: var(--radius);
+  font-size: 13px; font-family: var(--mono); font-weight: 400; min-width: 220px; max-width: 340px;
+  animation: toastIn .25s ease; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.toast.success { background: var(--bg3); border: 1px solid rgba(76,175,110,0.35); color: var(--green); }
+.toast.error { background: var(--bg3); border: 1px solid rgba(224,85,85,0.35); color: var(--red); }
+.toast.info { background: var(--bg3); border: 1px solid rgba(212,168,67,0.3); color: var(--gold); }
+@keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 
-    /* Status bar */
-    .status-bar {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
+/* ─── Spinner ──────────────────────────────────────────────────────────── */
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--gold); border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-    .status-pill {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.4rem 0.75rem;
-      border: 1px solid var(--border);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.65rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
+/* ─── Sidebar overlay (mobile) ─────────────────────────────────────────── */
+#sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
 
-    .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--muted);
-    }
+/* ─── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root { --sidebar: 240px; }
+  #sidebar { transform: translateX(-100%); }
+  #sidebar.open { transform: translateX(0); }
+  #sidebar-overlay.open { display: block; }
+  #main { margin-left: 0; }
+  .hamburger { display: block; }
+  .topbar { padding: 0 20px; }
+  .page-content { padding: 20px; }
+  .integration-grid { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .auth-card { padding: 32px 24px; }
+}
 
-    .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
-    .dot.red { background: var(--red); }
-    .dot.yellow { background: var(--accent); }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    /* KPI Grid */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1px;
-      background: var(--border);
-      margin-bottom: 2rem;
-    }
-
-    .kpi-card {
-      background: var(--bg);
-      padding: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      opacity: 0;
-      animation: fadeUp 0.5s ease forwards;
-    }
-
-    .kpi-card:nth-child(1) { animation-delay: 0.1s; }
-    .kpi-card:nth-child(2) { animation-delay: 0.2s; }
-    .kpi-card:nth-child(3) { animation-delay: 0.3s; }
-    .kpi-card:nth-child(4) { animation-delay: 0.4s; }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .kpi-label {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.6rem;
-      color: var(--muted);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-    }
-
-    .kpi-value {
-      font-size: 2.2rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1;
-    }
-
-    .kpi-value.accent { color: var(--accent); }
-    .kpi-value.green { color: var(--green); }
-
-    .kpi-sub {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.6rem;
-      color: var(--muted);
-    }
-
-    /* Content grid */
-    .content-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-    }
-
-    .panel {
-      border: 1px solid var(--border);
-      background: var(--surface);
-    }
-
-    .panel-header {
-      padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .panel-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .panel-count {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.65rem;
-      color: var(--muted);
-    }
-
-    .panel-body { padding: 0; }
-
-    /* Booking row */
-    .booking-row {
-      display: grid;
-      grid-template-columns: 3rem 1fr auto;
-      gap: 1rem;
-      align-items: center;
-      padding: 0.9rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      opacity: 0;
-      animation: fadeUp 0.4s ease forwards;
-      transition: background 0.15s;
-    }
-
-    .booking-row:last-child { border-bottom: none; }
-    .booking-row:hover { background: rgba(255,255,255,0.02); }
-
-    .booking-time {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.7rem;
-      color: var(--accent);
-      text-align: center;
-      line-height: 1.3;
-    }
-
-    .booking-info { display: flex; flex-direction: column; gap: 0.2rem; }
-
-    .booking-name {
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    .booking-label {
-      font-family: 'DM Mono', monospace;
-      font-size: 0.6rem;
-      color: var(--muted);
-    }
-
-    .badge {
-      padding: 0.2rem 0.5rem;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.55rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .badge.confirmed { background: var(--green-dim); color: var(--green); }
-    .badge.pending { background: var(--accent-dim); color: var(--accent); }
-    .badge.cancelled { background: var(--red-dim); color: var(--red); }
-
-    /* Integration row */
-    .integration-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .integration-row:last-child { border-bottom: none; }
-
-    .integration-info { display: flex; flex-direction: column; gap: 0.2rem; }
-    .integration-name { font-size: 0.8rem; font-weight: 600; }
-    .integration-detail { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--muted); }
-
-    /* Log row */
-    .log-row {
-      display: flex;
-      gap: 1rem;
-      align-items: flex-start;
-      padding: 0.75rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      font-family: 'DM Mono', monospace;
-      font-size: 0.65rem;
-    }
-
-    .log-row:last-child { border-bottom: none; }
-
-    .log-time { color: var(--muted); white-space: nowrap; }
-    .log-state { color: var(--accent); }
-    .log-action { color: var(--text); }
-    .log-sender { color: var(--muted); }
-
-    /* Empty state */
-    .empty {
-      padding: 2rem;
-      text-align: center;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.65rem;
-      color: var(--muted);
-    }
-
-    /* Loading */
-    .loading {
-      padding: 1.5rem;
-      text-align: center;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.65rem;
-      color: var(--muted);
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border: 1px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-right: 0.5rem;
-      vertical-align: middle;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Error */
-    .error-banner {
-      background: var(--red-dim);
-      border: 1px solid var(--red);
-      padding: 0.75rem 1rem;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.65rem;
-      color: var(--red);
-      margin-bottom: 1rem;
-      display: none;
-    }
-
-    /* Full width panel */
-    .panel.full { grid-column: 1 / -1; }
-
-    @media (max-width: 900px) {
-      .layout { grid-template-columns: 1fr; }
-      .sidebar { display: none; }
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-      .content-grid { grid-template-columns: 1fr; }
-    }
-  </style>
+/* ─── Divider ──────────────────────────────────────────────────────────── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text3); font-family: var(--mono); font-size: 13px; }
+</style>
 </head>
 <body>
 
-<div class="layout">
+<!-- ─── Toast container ──────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ─── Modal ───────────────────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- ─── Sidebar overlay (mobile) ────────────────────────────────────────── -->
+<div id="sidebar-overlay"></div>
+
+<!-- ─── Auth Screen ──────────────────────────────────────────────────────── -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">Bostaz</div>
+    <div class="auth-tagline">Dashboard · Réservations Instagram</div>
+    <div class="auth-tab-row">
+      <button class="auth-tab active" onclick="switchAuthTab('magic')">Lien magique</button>
+      <button class="auth-tab" onclick="switchAuthTab('password')">Mot de passe</button>
+    </div>
+    <div class="auth-form" id="auth-magic-form">
+      <div>
+        <div class="field-label">Email</div>
+        <input type="email" class="field-input" id="magic-email" placeholder="vous@salon.com" autocomplete="email">
+      </div>
+      <button class="btn-primary" id="magic-btn" onclick="sendMagicLink()">Envoyer le lien</button>
+      <div id="magic-message" style="display:none"></div>
+    </div>
+    <div class="auth-form hidden" id="auth-password-form">
+      <div>
+        <div class="field-label">Email</div>
+        <input type="email" class="field-input" id="pw-email" placeholder="vous@salon.com" autocomplete="email">
+      </div>
+      <div>
+        <div class="field-label">Mot de passe</div>
+        <input type="password" class="field-input" id="pw-pass" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" id="pw-btn" onclick="signInWithPassword()">Se connecter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── App ──────────────────────────────────────────────────────────────── -->
+<div id="app" class="hidden">
+
   <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="logo">
-      <div class="logo-mark">B</div>
-      <div class="logo-text">Bostaz</div>
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">Bostaz</div>
+      <div class="sidebar-logo-sub">Dashboard v1.0</div>
     </div>
-
-    <nav class="nav">
-      <div class="nav-item active">
-        <span class="nav-icon">◈</span> Dashboard
+    <div class="sidebar-nav">
+      <div class="nav-item active" onclick="navigate('apercu')" data-page="apercu">
+        <span class="nav-icon">◈</span> Aperçu
       </div>
-      <div class="nav-item">
-        <span class="nav-icon">◻</span> Bookings
+      <div class="nav-item" onclick="navigate('receptionniste')" data-page="receptionniste">
+        <span class="nav-icon">◎</span> Réceptionniste
       </div>
-      <div class="nav-item">
-        <span class="nav-icon">◇</span> Conversations
+      <div class="nav-item" onclick="navigate('services')" data-page="services">
+        <span class="nav-icon">◫</span> Services
       </div>
-      <div class="nav-item">
-        <span class="nav-icon">○</span> Intégrations
+      <div class="nav-item" onclick="navigate('equipe')" data-page="equipe">
+        <span class="nav-icon">◐</span> Équipe
       </div>
-    </nav>
-
-    <div class="sidebar-bottom">
-      <div class="account-badge" id="account-display">—</div>
+      <div class="nav-item" onclick="navigate('reservation')" data-page="reservation">
+        <span class="nav-icon">◷</span> Réservation
+      </div>
+      <div class="nav-item" onclick="navigate('faq')" data-page="faq">
+        <span class="nav-icon">◉</span> FAQ
+      </div>
+      <div class="nav-item" onclick="navigate('integrations')" data-page="integrations">
+        <span class="nav-icon">◌</span> Intégrations
+      </div>
     </div>
-  </aside>
+    <div class="sidebar-footer">
+      <div class="user-info" id="user-email-display">—</div>
+      <button class="btn-ghost" onclick="signOut()">Déconnexion</button>
+    </div>
+  </nav>
 
   <!-- Main -->
-  <main class="main">
+  <div id="main">
     <div class="topbar">
-      <div>
-        <div class="page-title">Tableau de bord</div>
-        <div class="page-date" id="current-date">—</div>
-      </div>
-      <button class="refresh-btn" onclick="loadAll()">
-        ↺ Actualiser
-      </button>
-    </div>
-
-    <div class="error-banner" id="error-banner">⚠ Erreur de connexion Supabase. Vérifie tes paramètres.</div>
-
-    <!-- Status bar -->
-    <div class="status-bar" id="status-bar">
-      <div class="status-pill"><div class="dot"></div> Chargement...</div>
-    </div>
-
-    <!-- KPIs -->
-    <div class="kpi-grid" id="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-label">DMs reçus</div>
-        <div class="kpi-value" id="kpi-dms">—</div>
-        <div class="kpi-sub">total</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Slots proposés</div>
-        <div class="kpi-value accent" id="kpi-slots">—</div>
-        <div class="kpi-sub" id="kpi-slot-rate">—</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Bookings confirmés</div>
-        <div class="kpi-value green" id="kpi-bookings">—</div>
-        <div class="kpi-sub" id="kpi-booking-rate">—</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Aujourd'hui</div>
-        <div class="kpi-value" id="kpi-today">—</div>
-        <div class="kpi-sub">rendez-vous</div>
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbar-title">Aperçu</div>
+      <div class="topbar-right">
+        <div class="save-status" id="save-status"></div>
       </div>
     </div>
-
-    <!-- Content grid -->
-    <div class="content-grid">
-
-      <!-- Bookings aujourd'hui -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Rendez-vous du jour</div>
-          <div class="panel-count" id="bookings-count">—</div>
-        </div>
-        <div class="panel-body" id="bookings-list">
-          <div class="loading"><span class="spinner"></span> Chargement...</div>
-        </div>
-      </div>
-
-      <!-- Intégrations -->
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Intégrations</div>
-          <div class="panel-count" id="integrations-count">—</div>
-        </div>
-        <div class="panel-body" id="integrations-list">
-          <div class="loading"><span class="spinner"></span> Chargement...</div>
-        </div>
-      </div>
-
-      <!-- Logs récents -->
-      <div class="panel full">
-        <div class="panel-header">
-          <div class="panel-title">Activité récente</div>
-          <div class="panel-count" id="logs-count">—</div>
-        </div>
-        <div class="panel-body" id="logs-list">
-          <div class="loading"><span class="spinner"></span> Chargement...</div>
-        </div>
-      </div>
-
+    <div class="page-content" id="page-content">
+      <div class="empty-state">Chargement…</div>
     </div>
-  </main>
+  </div>
 </div>
 
 <script>
-  // ── Config ─────────────────────────────────────────────────────────
-  const SUPABASE_URL = 'https://htlyhjdvqaqnqfdoqche.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0bHloamR2cWFxbnFmZG9xY2hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzU4NTgsImV4cCI6MjA4MzM1MTg1OH0.ycHxTm6FjICPrJ2eACneLdpGFNc8K5I1oVb9dhTh0fE';
+/* ═══════════════════════════════════════════════════════════════════════════
+   BOSTAZ DASHBOARD — Main JS
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-  // Get account_id from URL param
-  const params = new URLSearchParams(window.location.search);
-  const ACCOUNT_ID = params.get('account_id') ?? '';
+// ─── Config ──────────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://htlyhjdvqaqnqfdoqche.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0bHloanZxYXFucWZkb3FjaGUiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczNTg1NTYwMywiZXhwIjoyMDUxNDMxNjAzfQ.hb8SBMPMhApyVIa9QaMeik6C3FQ9DhtmP4MaFHuqW4Q';
+const N8N_BASE = 'https://samy30.app.n8n.cloud/webhook';
 
-  // ── Init ───────────────────────────────────────────────────────────
-  document.getElementById('current-date').textContent = new Date().toLocaleDateString('fr-CA', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+// ─── Supabase client ──────────────────────────────────────────────────────────
+const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let currentUser = null;       // Supabase user object
+let botConfig   = null;       // Current bot_config row
+let saveTimer   = null;       // Debounce timer for auto-save
+let currentPage = 'apercu';   // Active nav page
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Generate a UUID (or timestamp fallback) */
+function generateId() {
+  try { return crypto.randomUUID(); } catch { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+}
+
+/** Show a toast notification */
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+/** Format a date string to human-readable */
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleString('fr-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+  catch { return iso; }
+}
+
+/** Format booking status */
+function statusPill(s) {
+  const map = { confirmed: ['confirmed','Confirmé'], pending: ['pending','En attente'], cancelled: ['cancelled','Annulé'] };
+  const [cls, label] = map[s] ?? ['pending', s ?? '—'];
+  return `<span class="status-pill status-${cls}">${label}</span>`;
+}
+
+/** Show/hide the modal with given HTML content */
+function openModal(html) {
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+}
+// Close modal on backdrop click
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+/** Toggle mobile sidebar */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+document.getElementById('sidebar-overlay').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AUTH
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Switch between magic-link and password auth tabs */
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (tab === 'magic') === (i === 0)));
+  document.getElementById('auth-magic-form').classList.toggle('hidden', tab !== 'magic');
+  document.getElementById('auth-password-form').classList.toggle('hidden', tab !== 'password');
+}
+
+/** Send a magic link email */
+async function sendMagicLink() {
+  const email = document.getElementById('magic-email').value.trim();
+  if (!email) { toast('Veuillez entrer votre email.', 'error'); return; }
+  const btn = document.getElementById('magic-btn');
+  btn.disabled = true; btn.textContent = 'Envoi…';
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+  btn.disabled = false; btn.textContent = 'Envoyer le lien';
+  if (error) { toast('Erreur: ' + error.message, 'error'); return; }
+  const msgEl = document.getElementById('magic-message');
+  msgEl.style.display = 'block';
+  msgEl.innerHTML = `<div class="auth-message">✉ Vérifiez votre email — un lien de connexion vous a été envoyé à <strong>${email}</strong></div>`;
+}
+
+/** Sign in with email + password */
+async function signInWithPassword() {
+  const email = document.getElementById('pw-email').value.trim();
+  const pass  = document.getElementById('pw-pass').value;
+  if (!email || !pass) { toast('Email et mot de passe requis.', 'error'); return; }
+  const btn = document.getElementById('pw-btn');
+  btn.disabled = true; btn.textContent = 'Connexion…';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.disabled = false; btn.textContent = 'Se connecter';
+  if (error) toast('Erreur: ' + error.message, 'error');
+}
+
+/** Sign out */
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null; botConfig = null;
+  showAuth();
+}
+
+/** Show auth screen, hide app */
+function showAuth() {
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+
+/** Show app, hide auth screen */
+function showApp(user) {
+  currentUser = user;
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('user-email-display').textContent = user.email ?? user.id;
+  loadAll();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DATA LOADING
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Load bot_config for current user, creating a default row if missing */
+async function loadBotConfig() {
+  const uid = currentUser.id;
+  const { data, error } = await sb.from('bot_config').select('*').eq('account_id', uid).maybeSingle();
+  if (error) { console.error('loadBotConfig error', error); return null; }
+  if (!data) {
+    // Insert default row
+    const defaults = {
+      account_id: uid, active: false, open_hour: 9, close_hour: 18,
+      require_booking_confirmation: true, allow_human_takeover: false,
+      reminder_enabled: true, barber_notification_enabled: false,
+      welcome_message: 'Bonjour ! Je suis le bot de réservation. Comment puis-je vous aider ?',
+      outside_hours_message: 'Nous sommes fermés pour le moment. Revenez pendant nos heures d\'ouverture !',
+      handoff_message: 'Je vous transfère à un membre de l\'équipe.',
+      tone: 'friendly', emoji_level: 'low', closed_days: [0], days_ahead: 7,
+      slots_to_propose: 3, slot_duration: 30, same_day_booking_allowed: false,
+      services: [], staff: [], faq: []
+    };
+    const { data: inserted, error: ie } = await sb.from('bot_config').insert(defaults).select().single();
+    if (ie) { console.error('insert bot_config error', ie); return defaults; }
+    return inserted;
+  }
+  return data;
+}
+
+/** Load all dashboard data */
+async function loadAll() {
+  botConfig = await loadBotConfig();
+  navigate(currentPage);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AUTO-SAVE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Debounced save — call with partial patch object */
+function scheduleSave(patch) {
+  Object.assign(botConfig, patch);  // optimistic local update
+  if (saveTimer) clearTimeout(saveTimer);
+  setSaveStatus('saving');
+  saveTimer = setTimeout(() => saveBotConfig(patch), 1000);
+}
+
+function setSaveStatus(state) {
+  const el = document.getElementById('save-status');
+  if (state === 'saving') {
+    el.className = 'save-status saving';
+    el.innerHTML = '<span class="spinner"></span>';
+  } else if (state === 'saved') {
+    el.className = 'save-status saved';
+    el.textContent = 'Sauvegardé ✓';
+    setTimeout(() => { el.textContent = ''; el.className = 'save-status'; }, 2500);
+  } else {
+    el.className = 'save-status'; el.textContent = '';
+  }
+}
+
+/** Persist a partial patch to Supabase */
+async function saveBotConfig(patch) {
+  if (!currentUser) return;
+  const uid = currentUser.id;
+  const { error } = await sb.from('bot_config').update(patch).eq('account_id', uid);
+  if (error) {
+    console.error('saveBotConfig error', error);
+    setSaveStatus('');
+    toast('Erreur de sauvegarde: ' + error.message, 'error');
+  } else {
+    setSaveStatus('saved');
+    toast('Sauvegardé', 'success');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const PAGE_TITLES = {
+  apercu: 'Aperçu', receptionniste: 'Réceptionniste', services: 'Services',
+  equipe: 'Équipe', reservation: 'Réservation', faq: 'FAQ', integrations: 'Intégrations'
+};
+
+function navigate(page) {
+  currentPage = page;
+  // Update nav items
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.page === page));
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[page] ?? page;
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+  // Render page
+  const content = document.getElementById('page-content');
+  const renders = {
+    apercu: renderApercu, receptionniste: renderReceptionniste,
+    services: renderServices, equipe: renderEquipe,
+    reservation: renderReservation, faq: renderFaq, integrations: renderIntegrations
+  };
+  const fn = renders[page];
+  if (fn) fn(content);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE: APERÇU
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+async function renderApercu(container) {
+  container.innerHTML = `<div class="empty-state"><span class="spinner"></span></div>`;
+  const uid = currentUser.id;
+
+  // Fetch stats in parallel
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const [bookingsRes, convRes, remindersRes, integrationsRes, recentRes] = await Promise.all([
+    sb.from('bookings').select('id', { count: 'exact', head: true }).eq('account_id', uid).gte('created_at', monthStart),
+    sb.from('conversations').select('id', { count: 'exact', head: true }).eq('account_id', uid).not('state', 'in', '("blocked","confirmed")'),
+    sb.from('lead_events').select('id', { count: 'exact', head: true }).eq('account_id', uid).eq('event_type', 'reminder_sent').gte('created_at', monthStart),
+    sb.from('integrations').select('platform, status').eq('account_id', uid),
+    sb.from('bookings').select('sender_id, service_name, start_time, status').eq('account_id', uid).order('created_at', { ascending: false }).limit(5)
+  ]);
+
+  const bookingCount  = bookingsRes.count  ?? 0;
+  const convCount     = convRes.count     ?? 0;
+  const reminderCount = remindersRes.count ?? 0;
+  const integrations  = integrationsRes.data ?? [];
+  const recentBooks   = recentRes.data ?? [];
+
+  // Integration status helpers
+  const igInteg = integrations.find(i => i.platform === 'instagram');
+  const gcInteg = integrations.find(i => i.platform === 'google');
+  const intBadge = (integ) => {
+    if (!integ) return `<span class="badge badge-inactive"><span class="badge-dot"></span>Non connecté</span>`;
+    if (integ.status === 'active') return `<span class="badge badge-active"><span class="badge-dot"></span>Actif</span>`;
+    if (integ.status === 'error')  return `<span class="badge badge-error"><span class="badge-dot"></span>Erreur</span>`;
+    return `<span class="badge badge-pending"><span class="badge-dot"></span>En attente</span>`;
+  };
+  const botBadge = botConfig?.active
+    ? `<span class="badge badge-active"><span class="badge-dot"></span>Bot actif</span>`
+    : `<span class="badge badge-inactive"><span class="badge-dot"></span>Bot en pause</span>`;
+
+  // Recent bookings rows
+  const rows = recentBooks.length
+    ? recentBooks.map(b => `
+      <tr>
+        <td>${b.sender_id ?? '—'}</td>
+        <td>${b.service_name ?? '—'}</td>
+        <td>${fmtDate(b.start_time)}</td>
+        <td>${statusPill(b.status)}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="4" style="text-align:center;color:var(--text3)">Aucune réservation</td></tr>`;
+
+  container.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Aperçu</div>
+      <div class="section-subtitle">Vue d'ensemble de votre salon</div>
+    </div>
+
+    <div class="bot-status-row">
+      ${botBadge}
+      <span style="font-size:12px;color:var(--text3);font-family:var(--mono)">
+        Modifié dans <a href="#" onclick="navigate('receptionniste');return false;">Réceptionniste</a>
+      </span>
+    </div>
+
+    <div class="integration-grid" style="margin-bottom:24px">
+      <div class="integration-card">
+        <div class="integration-icon">📱</div>
+        <div class="integration-name">Instagram DM</div>
+        <div class="integration-meta">Webhook Meta</div>
+        ${intBadge(igInteg)}
+      </div>
+      <div class="integration-card">
+        <div class="integration-icon">📅</div>
+        <div class="integration-name">Google Calendar</div>
+        <div class="integration-meta">OAuth 2.0</div>
+        ${intBadge(gcInteg)}
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Réservations ce mois</div>
+        <div class="stat-value">${bookingCount}</div>
+        <div class="stat-sub">depuis le 1er du mois</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Conversations actives</div>
+        <div class="stat-value">${convCount}</div>
+        <div class="stat-sub">état ≠ bloqué/confirmé</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Rappels envoyés</div>
+        <div class="stat-value">${reminderCount}</div>
+        <div class="stat-sub">ce mois-ci</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:8px">
+      <div class="card-title">Réservations récentes</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Sender</th><th>Service</th><th>Date</th><th>Statut</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE: RÉCEPTIONNISTE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function renderReceptionniste(container) {
+  const c = botConfig ?? {};
+
+  container.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Réceptionniste</div>
+      <div class="section-subtitle">Comportement et personnalité du bot</div>
+    </div>
+
+    <!-- Bot on/off — large prominent toggle -->
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px">Bot actif</div>
+          <div style="font-size:13px;color:var(--text2);font-family:var(--mono)">
+            Le bot répond automatiquement aux DMs Instagram
+          </div>
+        </div>
+        <label class="toggle-switch lg">
+          <input type="checkbox" id="tog-active" ${c.active ? 'checked' : ''}>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Toggles -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Options</div>
+      ${mkToggle('tog-confirm',  'Confirmation de réservation requise', 'Le client doit confirmer avant validation', !!c.require_booking_confirmation)}
+      ${mkToggle('tog-takeover', 'Prise en main humaine', 'Permet de désactiver le bot pour un client spécifique', !!c.allow_human_takeover)}
+      ${mkToggle('tog-reminder', 'Rappels activés', 'Envoie un rappel avant le rendez-vous', !!c.reminder_enabled)}
+      ${mkToggle('tog-notif',    'Notification barbier', 'Notifie le staff lors d\'une nouvelle réservation', !!c.barber_notification_enabled)}
+    </div>
+
+    <!-- Messages -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Messages</div>
+      <div class="form-group">
+        <div class="field-label">Message de bienvenue</div>
+        <textarea class="field-textarea" id="msg-welcome" placeholder="Bonjour ! Je suis le bot de réservation...">${escHtml(c.welcome_message ?? '')}</textarea>
+      </div>
+      <div class="form-group">
+        <div class="field-label">Message hors heures</div>
+        <textarea class="field-textarea" id="msg-outside">${escHtml(c.outside_hours_message ?? '')}</textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <div class="field-label">Message de transfert</div>
+        <textarea class="field-textarea" id="msg-handoff">${escHtml(c.handoff_message ?? '')}</textarea>
+      </div>
+    </div>
+
+    <!-- Tone & Emoji -->
+    <div class="card">
+      <div class="card-title">Personnalité</div>
+      <div class="form-row">
+        <div>
+          <div class="field-label">Ton</div>
+          <select class="field-select" id="sel-tone">
+            <option value="friendly" ${c.tone==='friendly'?'selected':''}>Amical (friendly)</option>
+            <option value="pro"      ${c.tone==='pro'?'selected':''}>Professionnel (pro)</option>
+            <option value="chill"    ${c.tone==='chill'?'selected':''}>Décontracté (chill)</option>
+          </select>
+        </div>
+        <div>
+          <div class="field-label">Niveau d'emojis</div>
+          <select class="field-select" id="sel-emoji">
+            <option value="none"   ${c.emoji_level==='none'?'selected':''}>Aucun</option>
+            <option value="low"    ${c.emoji_level==='low'?'selected':''}>Bas</option>
+            <option value="medium" ${c.emoji_level==='medium'?'selected':''}>Moyen</option>
+            <option value="high"   ${c.emoji_level==='high'?'selected':''}>Élevé</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire up toggle events
+  bindToggle('tog-active',  v => scheduleSave({ active: v }));
+  bindToggle('tog-confirm', v => scheduleSave({ require_booking_confirmation: v }));
+  bindToggle('tog-takeover',v => scheduleSave({ allow_human_takeover: v }));
+  bindToggle('tog-reminder',v => scheduleSave({ reminder_enabled: v }));
+  bindToggle('tog-notif',   v => scheduleSave({ barber_notification_enabled: v }));
+
+  // Wire up textarea/select debounced saves
+  bindDebounce('msg-welcome', v => scheduleSave({ welcome_message: v }));
+  bindDebounce('msg-outside', v => scheduleSave({ outside_hours_message: v }));
+  bindDebounce('msg-handoff', v => scheduleSave({ handoff_message: v }));
+  bindChange('sel-tone',  v => scheduleSave({ tone: v }));
+  bindChange('sel-emoji', v => scheduleSave({ emoji_level: v }));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE: SERVICES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function renderServices(container) {
+  const services = botConfig?.services ?? [];
+
+  const cards = services.length
+    ? services.map(s => `
+      <div class="item-card" id="svc-${s.id}">
+        <div class="item-info">
+          <div class="item-name">${escHtml(s.name ?? '')}</div>
+          <div class="item-meta">${s.duration ?? 0} min · ${escHtml(s.price ?? '—')}
+            &nbsp;${s.active !== false ? '<span class="badge badge-active" style="padding:2px 8px;font-size:11px">Actif</span>' : '<span class="badge badge-inactive" style="padding:2px 8px;font-size:11px">Inactif</span>'}
+          </div>
+        </div>
+        <div class="item-actions">
+          <button class="btn-icon" onclick="editService('${s.id}')">✎</button>
+          <button class="btn-icon delete" onclick="deleteService('${s.id}')">✕</button>
+        </div>
+      </div>`).join('')
+    : `<div class="empty-state">Aucun service — ajoutez votre premier service ci-dessous.</div>`;
+
+  container.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Services</div>
+      <div class="section-subtitle">Gérez les prestations proposées par votre salon</div>
+    </div>
+    <div class="items-grid" id="services-list">${cards}</div>
+    <button class="btn-add" onclick="addService()"><span>＋</span> Ajouter un service</button>
+  `;
+}
+
+function serviceModal(title, svc, onSave) {
+  openModal(`
+    <div class="modal-title">${title}</div>
+    <div class="form-group">
+      <div class="field-label">Nom du service</div>
+      <input type="text" class="field-input" id="svc-name" value="${escHtml(svc?.name ?? '')}" placeholder="Ex: Coupe homme">
+    </div>
+    <div class="form-row">
+      <div>
+        <div class="field-label">Durée (minutes)</div>
+        <input type="number" class="field-number" id="svc-duration" value="${svc?.duration ?? 30}" min="5" max="240">
+      </div>
+      <div>
+        <div class="field-label">Prix</div>
+        <input type="text" class="field-input" id="svc-price" value="${escHtml(svc?.price ?? '')}" placeholder="Ex: 25$">
+      </div>
+    </div>
+    <div class="toggle-row" style="border:none;padding:8px 0">
+      <div class="toggle-info"><div class="toggle-label">Actif</div></div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="svc-active" ${svc?.active !== false ? 'checked' : ''}>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-primary" onclick="(${onSave.toString()})()">Enregistrer</button>
+    </div>
+  `);
+}
+
+function addService() {
+  serviceModal('Ajouter un service', null, async function() {
+    const name     = document.getElementById('svc-name').value.trim();
+    const duration = parseInt(document.getElementById('svc-duration').value) || 30;
+    const price    = document.getElementById('svc-price').value.trim();
+    const active   = document.getElementById('svc-active').checked;
+    if (!name) { toast('Nom requis', 'error'); return; }
+    const newSvc = { id: generateId(), name, duration, price, active };
+    const services = [...(botConfig?.services ?? []), newSvc];
+    closeModal();
+    await saveBotConfig({ services });
+    botConfig.services = services;
+    renderServices(document.getElementById('page-content'));
+    toast('Service ajouté', 'success');
+  });
+}
+
+function editService(id) {
+  const svc = (botConfig?.services ?? []).find(s => s.id === id);
+  if (!svc) return;
+  serviceModal('Modifier le service', svc, async function() {
+    const name     = document.getElementById('svc-name').value.trim();
+    const duration = parseInt(document.getElementById('svc-duration').value) || 30;
+    const price    = document.getElementById('svc-price').value.trim();
+    const active   = document.getElementById('svc-active').checked;
+    if (!name) { toast('Nom requis', 'error'); return; }
+    const services = (botConfig?.services ?? []).map(s => s.id === id ? { ...s, name, duration, price, active } : s);
+    closeModal();
+    await saveBotConfig({ services });
+    botConfig.services = services;
+    renderServices(document.getElementById('page-content'));
+    toast('Service modifié', 'success');
+  });
+}
+
+async function deleteService(id) {
+  if (!confirm('Supprimer ce service ?')) return;
+  const services = (botConfig?.services ?? []).filter(s => s.id !== id);
+  await saveBotConfig({ services });
+  botConfig.services = services;
+  renderServices(document.getElementById('page-content'));
+  toast('Service supprimé', 'info');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE: ÉQUIPE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function renderEquipe(container) {
+  const staff = botConfig?.staff ?? [];
+
+  const cards = staff.length
+    ? staff.map(m => `
+      <div class="item-card" id="stf-${m.id}">
+        <div class="item-info">
+          <div class="item-name">${escHtml(m.name ?? '')}</div>
+          <div class="item-meta">
+            ${escHtml(m.specialty ?? '—')} · <span style="color:var(--text3)">${escHtml(m.calendar_id ?? 'primary')}</span>
+            &nbsp;${m.active !== false ? '<span class="badge badge-active" style="padding:2px 8px;font-size:11px">Actif</span>' : '<span class="badge badge-inactive" style="padding:2px 8px;font-size:11px">Inactif</span>'}
+          </div>
+        </div>
+        <div class="item-actions">
+          <button class="btn-icon" onclick="editStaff('${m.id}')">✎</button>
+          <button class="btn-icon delete" onclick="deleteStaff('${m.id}')">✕</button>
+        </div>
+      </div>`).join('')
+    : `<div class="empty-state">Aucun membre — ajoutez votre équipe ci-dessous.</div>`;
+
+  container.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Équipe</div>
+      <div class="section-subtitle">Gérez les barbiers et coiffeurs de votre salon</div>
+    </div>
+    <div class="items-grid" id="staff-list">${cards}</div>
+    <button class="btn-add" onclick="addStaff()"><span>＋</span> Ajouter un membre</button>
+  `;
+}
+
+function staffModal(title, m, onSave) {
+  openModal(`
+    <div class="modal-title">${title}</div>
+    <div class="form-group">
+      <div class="field-label">Nom</div>
+      <input type="text" class="field-input" id="stf-name" value="${escHtml(m?.name ?? '')}" placeholder="Ex: Marc Dupont">
+    </div>
+    <div class="form-group">
+      <div class="field-label">Spécialité</div>
+      <input type="text" class="field-input" id="stf-spec" value="${escHtml(m?.specialty ?? '')}" placeholder="Ex: Barbier, Coloriste…">
+    </div>
+    <div class="form-group">
+      <div class="field-label">Google Calendar ID</div>
+      <input type="text" class="field-input" id="stf-cal" value="${escHtml(m?.calendar_id ?? 'primary')}" placeholder="primary ou email@gmail.com">
+    </div>
+    <div class="toggle-row" style="border:none;padding:8px 0">
+      <div class="toggle-info"><div class="toggle-label">Actif</div></div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="stf-active" ${m?.active !== false ? 'checked' : ''}>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-primary" onclick="(${onSave.toString()})()">Enregistrer</button>
+    </div>
+  `);
+}
+
+function addStaff() {
+  staffModal('Ajouter un membre', null, async function() {
+    const name        = document.getElementById('stf-name').value.trim();
+    const specialty   = document.getElementById('stf-spec').value.trim();
+    const calendar_id = document.getElementById('stf-cal').value.trim() || 'primary';
+    const active      = document.getElementById('stf-active').checked;
+    if (!name) { toast('Nom requis', 'error'); return; }
+    const newM = { id: generateId(), name, specialty, calendar_id, active };
+    const staff = [...(botConfig?.staff ?? []), newM];
+    closeModal();
+    await saveBotConfig({ staff });
+    botConfig.staff = staff;
+    renderEquipe(document.getElementById('page-content'));
+    toast('Membre ajouté', 'success');
+  });
+}
+
+function editStaff(id) {
+  const m = (botConfig?.staff ?? []).find(s => s.id === id);
+  if (!m) return;
+  staffModal('Modifier le membre', m, async function() {
+    const name        = document.getElementById('stf-name').value.trim();
+    const specialty   = document.getElementById('stf-spec').value.trim();
+    const calendar_id = document.getElementById('stf-cal').value.trim() || 'primary';
+    const active      = document.getElementById('stf-active').checked;
+    if (!name) { toast('Nom requis', 'error'); return; }
+    const staff = (botConfig?.staff ?? []).map(s => s.id === id ? { ...s, name, specialty, calendar_id, active } : s);
+    closeModal();
+    await saveBotConfig({ staff });
+    botConfig.staff = staff;
+    renderEquipe(document.getElementById('page-content'));
+    toast('Membre modifié', 'success');
+  });
+}
+
+async function deleteStaff(id) {
+  if (!confirm('Supprimer ce membre ?')) return;
+  const staff = (botConfig?.staff ?? []).filter(s => s.id !== id);
+  await saveBotConfig({ staff });
+  botConfig.staff = staff;
+  renderEquipe(document.getElementById('page-content'));
+  toast('Membre supprimé', 'info');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE: RÉSERVATION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function renderReservation(container) {
+  const c = botConfig ?? {};
+  const closedDays = c.closed_days ?? [];
+  const dayNames = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+
+  const dayBoxes = dayNames.map((d, i) => `
+    <div class="day-check">
+      <input type="checkbox" id="day-${i}" value="${i}" ${closedDays.includes(i) ? 'checked' : ''}>
+      <label for="day-${i}">${d}</label>
+    </div>`).join('');
+
+  const slotOpts = [15, 30, 45, 60];
+
+  container.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Réservation</div>
+      <div class="section-subtitle">Paramètres des créneaux et disponibilités</div>
+    </div>
+
+    <!-- Hours -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Heures d'ouverture</div>
+      <div class="form-row">
+        <div>
+          <div class="field-label">Ouverture (h)</div>
+          <input type="number" class="field-number" id="open-hour" value="${c.open_hour ?? 9}" min="0" max="23">
+        </div>
+        <div>
+          <div class="field-label">Fermeture (h)</div>
+          <input type="number" class="field-number" id="close-hour" value="${c.close_hour ?? 18}" min="0" max="23">
+        </div>
+      </div>
+    </div>
+
+    <!-- Closed days -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Jours de fermeture</div>
+      <div class="days-grid" id="days-grid">${dayBoxes}</div>
+    </div>
+
+    <!-- Slot settings -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title">Paramètres des créneaux</div>
+      <div class="form-row" style="margin-bottom:20px">
+        <div>
+          <div class="field-label">Jours à l'avance</div>
+          <input type="number" class="field-number" id="days-ahead" value="${c.days_ahead ?? 7}" min="1" max="30">
+        </div>
+        <div>
+          <div class="field-label">Créneaux proposés</div>
+          <input type="number" class="field-number" id="slots-propose" value="${c.slots_to_propose ?? 3}" min="1" max="5">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <div class="field-label" style="margin-bottom:10px">Durée d'un créneau</div>
+        <div class="segmented" id="slot-duration">
+          ${slotOpts.map(v => `<button class="seg-btn ${(c.slot_duration??30)===v?'active':''}" onclick="setSlotDuration(${v})">${v} min</button>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Same day -->
+    <div class="card">
+      ${mkToggle('tog-sameday', 'Réservation le jour même', 'Autorise les clients à réserver pour aujourd\'hui', !!c.same_day_booking_allowed)}
+    </div>
+  `;
+
+  // Wire hours
+  bindDebounceNum('open-hour',  v => scheduleSave({ open_hour: v }));
+  bindDebounceNum('close-hour', v => scheduleSave({ close_hour: v }));
+  bindDebounceNum('days-ahead', v => scheduleSave({ days_ahead: v }));
+  bindDebounceNum('slots-propose', v => scheduleSave({ slots_to_propose: v }));
+
+  // Wire closed days
+  document.querySelectorAll('#days-grid input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const closed = Array.from(document.querySelectorAll('#days-grid input:checked')).map(c => parseInt(c.value));
+      scheduleSave({ closed_days: closed });
+    });
   });
 
-  document.getElementById('account-display').textContent = ACCOUNT_ID
-    ? 'ID: ' + ACCOUNT_ID.substring(0, 8) + '...'
-    : 'Aucun compte';
+  bindToggle('tog-sameday', v => scheduleSave({ same_day_booking_allowed: v }));
+}
 
-  // ── Supabase fetch helper ──────────────────────────────────────────
-  async function query(table, params = '') {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Content-Type': 'application/json'
-      }
-    });
-    if (!res.ok) throw new Error(`${table}: ${res.status}`);
-    return res.json();
-  }
+function setSlotDuration(val) {
+  document.querySelectorAll('#slot-duration .seg-btn').forEach(b => b.classList.toggle('active', b.textContent.trim() === val + ' min'));
+  scheduleSave({ slot_duration: val });
+}
 
-  async function rpc(fn, body = {}) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE: FAQ
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function renderFaq(container) {
+  const faq = botConfig?.faq ?? [];
+
+  const cards = faq.length
+    ? faq.map(f => `
+      <div class="faq-card" id="faq-${f.id}">
+        <div class="faq-header" onclick="toggleFaqCard('${f.id}')">
+          <div class="faq-q">${escHtml(f.q ?? f.question ?? '')}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn-icon" onclick="event.stopPropagation();editFaq('${f.id}')">✎</button>
+            <button class="btn-icon delete" onclick="event.stopPropagation();deleteFaq('${f.id}')">✕</button>
+            <span class="faq-chevron">▶</span>
+          </div>
+        </div>
+        <div class="faq-body">
+          <div class="faq-a">${escHtml(f.a ?? f.answer ?? '')}</div>
+          ${(f.question_examples ?? []).length ? `<div class="faq-examples">Exemples: ${(f.question_examples).join(' · ')}</div>` : ''}
+        </div>
+      </div>`).join('')
+    : `<div class="empty-state">Aucune FAQ — ajoutez des questions fréquentes.</div>`;
+
+  container.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">FAQ</div>
+      <div class="section-subtitle">Questions fréquentes répondues automatiquement par le bot</div>
+    </div>
+    <div id="faq-list">${cards}</div>
+    <button class="btn-add" onclick="addFaq()"><span>＋</span> Ajouter une FAQ</button>
+  `;
+}
+
+function toggleFaqCard(id) {
+  document.getElementById('faq-' + id)?.classList.toggle('open');
+}
+
+function faqModal(title, f, onSave) {
+  openModal(`
+    <div class="modal-title">${title}</div>
+    <div class="form-group">
+      <div class="field-label">Question</div>
+      <input type="text" class="field-input" id="faq-q" value="${escHtml(f?.q ?? f?.question ?? '')}" placeholder="Ex: Combien coûte une coupe ?">
+    </div>
+    <div class="form-group">
+      <div class="field-label">Réponse</div>
+      <textarea class="field-textarea" id="faq-a" placeholder="La réponse du bot…">${escHtml(f?.a ?? f?.answer ?? '')}</textarea>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <div class="field-label">Exemples de formulations (1 par ligne)</div>
+      <textarea class="field-textarea" id="faq-examples" style="min-height:70px" placeholder="c'est combien une coupe ?\ncombien vous coûtez ?">${escHtml((f?.question_examples ?? []).join('\n'))}</textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-primary" onclick="(${onSave.toString()})()">Enregistrer</button>
+    </div>
+  `);
+}
+
+function addFaq() {
+  faqModal('Ajouter une FAQ', null, async function() {
+    const q        = document.getElementById('faq-q').value.trim();
+    const a        = document.getElementById('faq-a').value.trim();
+    const examples = document.getElementById('faq-examples').value.split('\n').map(l=>l.trim()).filter(Boolean);
+    if (!q || !a) { toast('Question et réponse requises', 'error'); return; }
+    const newF = { id: generateId(), q, a, question_examples: examples };
+    const faq = [...(botConfig?.faq ?? []), newF];
+    closeModal();
+    await saveBotConfig({ faq });
+    botConfig.faq = faq;
+    renderFaq(document.getElementById('page-content'));
+    toast('FAQ ajoutée', 'success');
+  });
+}
+
+function editFaq(id) {
+  const f = (botConfig?.faq ?? []).find(x => x.id === id);
+  if (!f) return;
+  faqModal('Modifier la FAQ', f, async function() {
+    const q        = document.getElementById('faq-q').value.trim();
+    const a        = document.getElementById('faq-a').value.trim();
+    const examples = document.getElementById('faq-examples').value.split('\n').map(l=>l.trim()).filter(Boolean);
+    if (!q || !a) { toast('Question et réponse requises', 'error'); return; }
+    const faq = (botConfig?.faq ?? []).map(x => x.id === id ? { ...x, q, a, question_examples: examples } : x);
+    closeModal();
+    await saveBotConfig({ faq });
+    botConfig.faq = faq;
+    renderFaq(document.getElementById('page-content'));
+    toast('FAQ modifiée', 'success');
+  });
+}
+
+async function deleteFaq(id) {
+  if (!confirm('Supprimer cette FAQ ?')) return;
+  const faq = (botConfig?.faq ?? []).filter(x => x.id !== id);
+  await saveBotConfig({ faq });
+  botConfig.faq = faq;
+  renderFaq(document.getElementById('page-content'));
+  toast('FAQ supprimée', 'info');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE: INTÉGRATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+async function renderIntegrations(container) {
+  container.innerHTML = `<div class="empty-state"><span class="spinner"></span></div>`;
+  const uid = currentUser.id;
+  const { data: integrations } = await sb.from('integrations').select('*').eq('account_id', uid);
+  const ig = (integrations ?? []).find(i => i.platform === 'instagram');
+  const gc = (integrations ?? []).find(i => i.platform === 'google');
+
+  const intBadge = (integ) => {
+    if (!integ) return `<span class="badge badge-inactive"><span class="badge-dot"></span>Non connecté</span>`;
+    if (integ.status === 'active') return `<span class="badge badge-active"><span class="badge-dot"></span>Actif</span>`;
+    if (integ.status === 'error')  return `<span class="badge badge-error"><span class="badge-dot"></span>Erreur</span>`;
+    return `<span class="badge badge-pending"><span class="badge-dot"></span>En attente</span>`;
+  };
+  const intUpdated = (integ) => integ?.updated_at ? `<div class="integration-meta">Mis à jour: ${fmtDate(integ.updated_at)}</div>` : `<div class="integration-meta">Jamais connecté</div>`;
+
+  container.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Intégrations</div>
+      <div class="section-subtitle">Connectez Instagram et Google Calendar à votre compte</div>
+    </div>
+
+    <div style="display:grid;gap:16px;margin-bottom:32px">
+      <!-- Instagram -->
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="font-size:22px">📱</span>
+              <div>
+                <div style="font-size:15px;font-weight:700">Instagram DM</div>
+                <div style="font-size:12px;color:var(--text3);font-family:var(--mono)">Meta Messaging API · Webhook</div>
+              </div>
+            </div>
+            ${intUpdated(ig)}
+            ${intBadge(ig)}
+          </div>
+          <button class="btn-primary" onclick="connectInstagram()" style="white-space:nowrap;padding:10px 18px">
+            ${ig?.status === 'active' ? 'Reconnecter' : 'Connecter Instagram'}
+          </button>
+        </div>
+      </div>
+
+      <!-- Google Calendar -->
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="font-size:22px">📅</span>
+              <div>
+                <div style="font-size:15px;font-weight:700">Google Calendar</div>
+                <div style="font-size:12px;color:var(--text3);font-family:var(--mono)">OAuth 2.0 · Gestion des créneaux</div>
+              </div>
+            </div>
+            ${intUpdated(gc)}
+            ${intBadge(gc)}
+          </div>
+          <button class="btn-primary" onclick="connectGoogle()" style="white-space:nowrap;padding:10px 18px">
+            ${gc?.status === 'active' ? 'Reconnecter' : 'Connecter Google Calendar'}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test bot -->
+    <div class="card">
+      <div class="card-title">Tester le bot</div>
+      <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px">
+        Simulez une conversation DM avec votre bot (F14 State Machine)
+      </div>
+      <div class="chat-container">
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-msg bot">
+            <div class="chat-bubble">👋 Bonjour ! Testez votre bot ici. Envoyez un message pour simuler une conversation Instagram DM.</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" class="chat-input" id="chat-input" placeholder="Tapez un message…" onkeydown="if(event.key==='Enter')sendChatMsg()">
+          <button class="chat-send" onclick="sendChatMsg()">Envoyer</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function connectInstagram() {
+  window.location.href = `/webhook/f09a-meta-oauth?account_id=${currentUser.id}`;
+}
+function connectGoogle() {
+  window.location.href = `/webhook/f10a-google-oauth?account_id=${currentUser.id}`;
+}
+
+async function sendChatMsg() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const msgs = document.getElementById('chat-messages');
+
+  // Append user bubble
+  msgs.innerHTML += `<div class="chat-msg user"><div class="chat-bubble">${escHtml(msg)}</div></div>`;
+  msgs.innerHTML += `<div class="chat-msg bot" id="chat-loading"><div class="chat-bubble"><span class="spinner"></span></div></div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {
+    const res = await fetch(`${N8N_BASE}/f14-dm-engine`, {
       method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: currentUser.id, sender_id: 'dashboard-test', message: msg })
     });
-    if (!res.ok) throw new Error(`rpc/${fn}: ${res.status}`);
-    return res.json();
-  }
-
-  // ── Format helpers ─────────────────────────────────────────────────
-  function formatTime(iso) {
-    return new Date(iso).toLocaleTimeString('fr-CA', {
-      hour: '2-digit', minute: '2-digit', timeZone: 'America/Toronto'
-    });
-  }
-
-  function formatRelative(iso) {
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'maintenant';
-    if (mins < 60) return `il y a ${mins}m`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `il y a ${hrs}h`;
-    return new Date(iso).toLocaleDateString('fr-CA');
-  }
-
-  function stateColor(state) {
-    const map = {
-      idle: '#6b6b5e',
-      awaiting_time_choice: '#d4a843',
-      confirmed: '#4ecb71',
-      blocked: '#e05555',
-      needs_human: '#5b9cf6',
-      cancel_pending: '#e05555'
-    };
-    return map[state] ?? '#6b6b5e';
-  }
-
-  // ── Load KPIs ──────────────────────────────────────────────────────
-  async function loadKPIs() {
-    if (!ACCOUNT_ID) return;
+    const text = await res.text();
+    let display;
     try {
-      const kpis = await query('v_kpis', '?select=*&limit=1');
-      const k = kpis[0] ?? {};
-      document.getElementById('kpi-dms').textContent = k.dm_recus ?? '0';
-      document.getElementById('kpi-slots').textContent = k.slots_proposes ?? '0';
-      document.getElementById('kpi-bookings').textContent = k.bookings_crees ?? '0';
-      document.getElementById('kpi-slot-rate').textContent = (k.taux_slot_pct ?? 0) + '% des DMs';
-      document.getElementById('kpi-booking-rate').textContent = (k.taux_booking_pct ?? 0) + '% des slots';
-    } catch(e) {
-      console.error('KPIs:', e);
+      const json = JSON.parse(text);
+      display = `<pre>${escHtml(JSON.stringify(json, null, 2))}</pre>`;
+    } catch {
+      display = escHtml(text);
     }
+    document.getElementById('chat-loading')?.remove();
+    msgs.innerHTML += `<div class="chat-msg bot"><div class="chat-bubble">${display}</div></div>`;
+  } catch (e) {
+    document.getElementById('chat-loading')?.remove();
+    msgs.innerHTML += `<div class="chat-msg bot"><div class="chat-bubble" style="color:var(--red)">Erreur: ${escHtml(e.message)}</div></div>`;
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HELPERS — DOM binding & HTML escaping
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Escape HTML special chars */
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/** Build a toggle row HTML string */
+function mkToggle(id, label, desc, checked) {
+  return `
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-label">${label}</div>
+        <div class="toggle-desc">${desc}</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="${id}" ${checked ? 'checked' : ''}>
+        <span class="toggle-track"></span>
+      </label>
+    </div>`;
+}
+
+/** Bind toggle checkbox change */
+function bindToggle(id, fn) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', () => fn(el.checked));
+}
+
+/** Bind textarea/input with debounce (string value) */
+function bindDebounce(id, fn, delay = 800) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  let t;
+  el.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => fn(el.value), delay); });
+}
+
+/** Bind number input with debounce */
+function bindDebounceNum(id, fn, delay = 600) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  let t;
+  el.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => fn(parseInt(el.value) || 0), delay); });
+}
+
+/** Bind select change (immediate) */
+function bindChange(id, fn) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', () => fn(el.value));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INIT — Auth state machine
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Bootstrap: check session, handle magic link hash, subscribe to auth events */
+async function init() {
+  // Check for existing session
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    showApp(session.user);
+  } else {
+    showAuth();
   }
 
-  // ── Load bookings today ────────────────────────────────────────────
-  async function loadBookings() {
-    const el = document.getElementById('bookings-list');
-    if (!ACCOUNT_ID) { el.innerHTML = '<div class="empty">Aucun account_id dans l\'URL</div>'; return; }
-
-    const today = new Date().toISOString().split('T')[0];
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-
-    try {
-      const bookings = await query('bookings',
-        `?account_id=eq.${ACCOUNT_ID}&start_iso=gte.${today}T00:00:00Z&start_iso=lt.${tomorrow}T00:00:00Z&order=start_iso.asc&select=*`
-      );
-
-      document.getElementById('bookings-count').textContent = bookings.length + ' RDV';
-      document.getElementById('kpi-today').textContent = bookings.length;
-
-      if (bookings.length === 0) {
-        el.innerHTML = '<div class="empty">Aucun rendez-vous aujourd\'hui</div>';
-        return;
-      }
-
-      el.innerHTML = bookings.map((b, i) => `
-        <div class="booking-row" style="animation-delay:${i * 0.06}s">
-          <div class="booking-time">
-            ${formatTime(b.start_iso)}<br>
-            <span style="color:var(--muted);font-size:0.55rem">${formatTime(b.end_iso)}</span>
-          </div>
-          <div class="booking-info">
-            <div class="booking-name">${b.sender_id ?? '—'}</div>
-            <div class="booking-label">${b.label ?? '—'}</div>
-          </div>
-          <div class="badge ${b.status}">${b.status}</div>
-        </div>
-      `).join('');
-    } catch(e) {
-      el.innerHTML = '<div class="empty">Erreur de chargement</div>';
+  // Listen for auth state changes (magic link redirect, sign-out, etc.)
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session) {
+      showApp(session.user);
+    } else {
+      currentUser = null; botConfig = null;
+      showAuth();
     }
-  }
+  });
+}
 
-  // ── Load integrations ──────────────────────────────────────────────
-  async function loadIntegrations() {
-    const el = document.getElementById('integrations-list');
-    if (!ACCOUNT_ID) { el.innerHTML = '<div class="empty">—</div>'; return; }
-
-    try {
-      const integrations = await query('integrations',
-        `?account_id=eq.${ACCOUNT_ID}&select=provider,status,updated_at,metadata`
-      );
-
-      document.getElementById('integrations-count').textContent = integrations.length;
-
-      const statusBar = document.getElementById('status-bar');
-      const pills = integrations.map(i => {
-        const dotClass = i.status === 'active' ? 'green' : i.status === 'needs_reconnect' ? 'red' : 'yellow';
-        const label = i.provider === 'google' ? 'Google Calendar' : 'Meta Instagram';
-        return `<div class="status-pill"><div class="dot ${dotClass}"></div> ${label}</div>`;
-      });
-      statusBar.innerHTML = pills.join('') || '<div class="status-pill"><div class="dot"></div> Aucune intégration</div>';
-
-      if (integrations.length === 0) {
-        el.innerHTML = '<div class="empty">Aucune intégration configurée</div>';
-        return;
-      }
-
-      el.innerHTML = integrations.map(i => {
-        const dotClass = i.status === 'active' ? 'green' : 'red';
-        const label = i.provider === 'google' ? '📅 Google Calendar' : '📸 Instagram';
-        const detail = i.status === 'active'
-          ? (i.metadata?.calendar_id ?? i.metadata?.page_name ?? 'Connecté')
-          : 'Reconnexion requise';
-        return `
-          <div class="integration-row">
-            <div class="integration-info">
-              <div class="integration-name">${label}</div>
-              <div class="integration-detail">${detail}</div>
-            </div>
-            <div class="badge ${i.status === 'active' ? 'confirmed' : 'cancelled'}">
-              ${i.status === 'active' ? 'actif' : 'erreur'}
-            </div>
-          </div>
-        `;
-      }).join('');
-    } catch(e) {
-      el.innerHTML = '<div class="empty">Erreur de chargement</div>';
-    }
-  }
-
-  // ── Load logs ──────────────────────────────────────────────────────
-  async function loadLogs() {
-    const el = document.getElementById('logs-list');
-    if (!ACCOUNT_ID) { el.innerHTML = '<div class="empty">—</div>'; return; }
-
-    try {
-      const logs = await query('logs',
-        `?account_id=eq.${ACCOUNT_ID}&order=created_at.desc&limit=15&select=*`
-      );
-
-      document.getElementById('logs-count').textContent = logs.length + ' entrées';
-
-      if (logs.length === 0) {
-        el.innerHTML = '<div class="empty">Aucune activité enregistrée</div>';
-        return;
-      }
-
-      el.innerHTML = logs.map(l => `
-        <div class="log-row">
-          <span class="log-time">${formatRelative(l.created_at)}</span>
-          <span class="log-state" style="color:${stateColor(l.from_state ?? '')}">${l.from_state ?? '—'}</span>
-          <span style="color:var(--muted)">→</span>
-          <span class="log-state" style="color:${stateColor(l.to_state ?? '')}">${l.to_state ?? '—'}</span>
-          <span class="log-action">${l.action ?? '—'}</span>
-          <span class="log-sender">${l.sender_id ? '@' + l.sender_id.substring(0, 12) : ''}</span>
-        </div>
-      `).join('');
-    } catch(e) {
-      el.innerHTML = '<div class="empty">Erreur de chargement</div>';
-    }
-  }
-
-  // ── Load all ───────────────────────────────────────────────────────
-  async function loadAll() {
-    if (!ACCOUNT_ID) {
-      document.getElementById('error-banner').style.display = 'block';
-      document.getElementById('error-banner').textContent = '⚠ Aucun account_id dans l\'URL. Ajoute ?account_id=TON_UUID';
-      return;
-    }
-    await Promise.all([loadKPIs(), loadBookings(), loadIntegrations(), loadLogs()]);
-  }
-
-  // ── Boot ───────────────────────────────────────────────────────────
-  loadAll();
-
-  // Auto-refresh every 60 seconds
-  setInterval(loadAll, 60000);
+// Start app
+init();
 </script>
-
 </body>
 </html>
