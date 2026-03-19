@@ -1439,6 +1439,20 @@ function resetConversation() {
   `;
 }
 
+/** Poll Supabase for the latest outbound message to testSenderId sent after `since` */
+async function pollReply(since) {
+  const { data } = await sb
+    .from('messages')
+    .select('text, created_at')
+    .eq('account_id', accountId)
+    .eq('sender_id', testSenderId)
+    .eq('direction', 'outbound')
+    .gt('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  return data?.[0]?.text ?? null;
+}
+
 async function sendChatMsg() {
   const input = document.getElementById('chat-input');
   const btn   = document.getElementById('chat-send-btn');
@@ -1449,8 +1463,8 @@ async function sendChatMsg() {
   input.value = '';
   btn.disabled = true;
 
-  const t = chatTime();
-  appendBubble(msgs, 'user', escHtml(msg), t);
+  const sentAt = new Date().toISOString();
+  appendBubble(msgs, 'user', escHtml(msg), chatTime());
   appendTyping(msgs);
 
   const payload = {
@@ -1462,32 +1476,39 @@ async function sendChatMsg() {
   };
 
   try {
-    const res = await fetch('https://samy30.app.n8n.cloud/webhook/f14-state-machine', {
+    await fetch('https://samy30.app.n8n.cloud/webhook/f14-state-machine', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    const raw = await res.text();
-    document.getElementById('chat-typing')?.remove();
-
-    let reply;
-    try {
-      const json = JSON.parse(raw);
-      // Try common reply fields
-      reply = json.reply ?? json.text ?? json.message ?? json.response ?? json.output;
-      if (!reply && Array.isArray(json)) {
-        reply = json[0]?.reply ?? json[0]?.text ?? json[0]?.message;
-      }
-      if (!reply) reply = `<pre>${escHtml(JSON.stringify(json, null, 2))}</pre>`;
-      else reply = escHtml(reply).replace(/\n/g, '<br>');
-    } catch {
-      reply = raw ? escHtml(raw).replace(/\n/g, '<br>') : '(réponse vide)';
-    }
-    appendBubble(msgs, 'bot', reply, chatTime());
   } catch (e) {
     document.getElementById('chat-typing')?.remove();
     appendBubble(msgs, 'bot', `<span style="color:var(--red)">Erreur réseau: ${escHtml(e.message)}</span>`, chatTime());
+    btn.disabled = false;
+    input.focus();
+    return;
   }
+
+  // Wait 3s then poll Supabase for outbound reply
+  await new Promise(r => setTimeout(r, 3000));
+  let reply = await pollReply(sentAt);
+
+  // Retry once after 2 more seconds if nothing yet
+  if (!reply) {
+    await new Promise(r => setTimeout(r, 2000));
+    reply = await pollReply(sentAt);
+  }
+
+  document.getElementById('chat-typing')?.remove();
+
+  if (reply) {
+    appendBubble(msgs, 'bot', escHtml(reply).replace(/\n/g, '<br>'), chatTime());
+  } else {
+    appendBubble(msgs, 'bot',
+      '<span style="color:var(--text2)">Le bot réfléchit encore… réessaie dans quelques secondes.</span>',
+      chatTime());
+  }
+
   btn.disabled = false;
   input.focus();
 }
