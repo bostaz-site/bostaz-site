@@ -291,25 +291,50 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
 .faq-a { font-size: 13px; color: var(--text2); font-family: var(--mono); line-height: 1.6; margin-bottom: 8px; }
 .faq-examples { font-size: 11px; color: var(--text3); font-family: var(--mono); }
 
-/* ─── Chat ─────────────────────────────────────────────────────────────── */
+/* ─── Chat / Mode Test ──────────────────────────────────────────────────── */
+.chat-wrap { display: flex; flex-direction: column; height: 520px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius2); overflow: hidden; }
+.chat-topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg2); }
+.chat-topbar-info { display: flex; align-items: center; gap: 10px; }
+.chat-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--gold-bg); border: 1px solid var(--gold-dim); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.chat-contact { font-size: 13px; font-weight: 600; }
+.chat-contact-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.chat-reset-btn { background: transparent; border: 1px solid var(--border2); color: var(--text2); border-radius: var(--radius); padding: 6px 12px; font-size: 11px; font-family: var(--mono); transition: all .2s; white-space: nowrap; }
+.chat-reset-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
 .chat-container { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius2); overflow: hidden; }
-.chat-messages { height: 320px; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.chat-msg { max-width: 80%; }
-.chat-msg.user { align-self: flex-end; }
-.chat-msg.bot { align-self: flex-start; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 4px; }
+.chat-day-sep { text-align: center; font-size: 10px; color: var(--text3); font-family: var(--mono); margin: 8px 0; letter-spacing: 0.5px; }
+.chat-msg { display: flex; flex-direction: column; max-width: 72%; margin-bottom: 2px; }
+.chat-msg.user { align-self: flex-end; align-items: flex-end; }
+.chat-msg.bot { align-self: flex-start; align-items: flex-start; }
+.chat-msg + .chat-msg.user { margin-top: 2px; }
+.chat-msg + .chat-msg.bot { margin-top: 2px; }
+.chat-msg.user + .chat-msg.bot, .chat-msg.bot + .chat-msg.user { margin-top: 12px; }
 .chat-bubble {
-  padding: 10px 14px; border-radius: 12px; font-size: 13px; font-family: var(--mono); line-height: 1.5;
+  padding: 9px 14px; border-radius: 18px; font-size: 13px; line-height: 1.6; word-break: break-word; max-width: 100%;
 }
-.chat-msg.user .chat-bubble { background: var(--gold-dim); color: #0a0a0a; border-bottom-right-radius: 3px; }
-.chat-msg.bot .chat-bubble { background: var(--bg4); color: var(--text); border-bottom-left-radius: 3px; border: 1px solid var(--border); }
-.chat-msg.bot .chat-bubble pre { font-family: var(--mono); font-size: 11px; white-space: pre-wrap; word-break: break-all; color: var(--text2); }
-.chat-input-row { display: flex; gap: 0; border-top: 1px solid var(--border); }
+.chat-msg.user .chat-bubble {
+  background: var(--gold); color: #0a0a0a; border-bottom-right-radius: 4px;
+  font-family: var(--head); font-weight: 500;
+}
+.chat-msg.bot .chat-bubble {
+  background: var(--bg4); color: var(--text); border-bottom-left-radius: 4px;
+  border: 1px solid var(--border2); font-family: var(--mono);
+}
+.chat-msg.bot .chat-bubble pre { font-family: var(--mono); font-size: 11px; white-space: pre-wrap; word-break: break-all; color: var(--text2); margin: 0; }
+.chat-time { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 3px; padding: 0 4px; }
+.chat-typing .chat-bubble { display: flex; gap: 4px; align-items: center; padding: 12px 16px; }
+.chat-typing .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); animation: typing-dot 1.2s infinite; }
+.chat-typing .dot:nth-child(2) { animation-delay: .2s; }
+.chat-typing .dot:nth-child(3) { animation-delay: .4s; }
+@keyframes typing-dot { 0%,60%,100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+.chat-input-row { display: flex; gap: 0; border-top: 1px solid var(--border); background: var(--bg2); }
 .chat-input {
-  flex: 1; background: transparent; border: none; outline: none; padding: 13px 16px;
+  flex: 1; background: transparent; border: none; outline: none; padding: 14px 16px;
   color: var(--text); font-size: 13px; font-family: var(--mono);
 }
-.chat-send { background: var(--gold); color: #0a0a0a; border: none; padding: 10px 18px; font-size: 13px; font-weight: 700; font-family: var(--head); transition: opacity .2s; }
+.chat-send { background: var(--gold); color: #0a0a0a; border: none; padding: 10px 20px; font-size: 13px; font-weight: 700; font-family: var(--head); transition: opacity .2s; }
 .chat-send:hover { opacity: 0.88; }
+.chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ─── Toast ────────────────────────────────────────────────────────────── */
 #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column-reverse; gap: 8px; }
@@ -408,6 +433,9 @@ input[type="number"]::-webkit-inner-spin-button { opacity: 0.5; }
       </div>
       <div class="nav-item" onclick="navigate('integrations')" data-page="integrations">
         <span class="nav-icon">◌</span> Intégrations
+      </div>
+      <div class="nav-item" onclick="navigate('test')" data-page="test">
+        <span class="nav-icon">◈</span> Mode Test
       </div>
     </div>
     <div class="sidebar-footer">
@@ -605,7 +633,8 @@ async function saveBotConfig(patch) {
 
 const PAGE_TITLES = {
   apercu: 'Aperçu', receptionniste: 'Réceptionniste', services: 'Services',
-  equipe: 'Équipe', reservation: 'Réservation', faq: 'FAQ', integrations: 'Intégrations'
+  equipe: 'Équipe', reservation: 'Réservation', faq: 'FAQ', integrations: 'Intégrations',
+  test: 'Mode Test'
 };
 
 function navigate(page) {
@@ -621,7 +650,8 @@ function navigate(page) {
   const renders = {
     apercu: renderApercu, receptionniste: renderReceptionniste,
     services: renderServices, equipe: renderEquipe,
-    reservation: renderReservation, faq: renderFaq, integrations: renderIntegrations
+    reservation: renderReservation, faq: renderFaq, integrations: renderIntegrations,
+    test: renderTest
   };
   const fn = renders[page];
   if (fn) fn(content);
@@ -1308,23 +1338,12 @@ async function renderIntegrations(container) {
       </div>
     </div>
 
-    <!-- Test bot -->
-    <div class="card">
-      <div class="card-title">Tester le bot</div>
-      <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px">
-        Simulez une conversation DM avec votre bot (F14 State Machine)
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div>
+        <div class="card-title" style="margin-bottom:4px">Tester le bot</div>
+        <div style="font-size:12px;color:var(--text3);font-family:var(--mono)">Simulez une conversation DM avec le moteur F14</div>
       </div>
-      <div class="chat-container">
-        <div class="chat-messages" id="chat-messages">
-          <div class="chat-msg bot">
-            <div class="chat-bubble">👋 Bonjour ! Testez votre bot ici. Envoyez un message pour simuler une conversation Instagram DM.</div>
-          </div>
-        </div>
-        <div class="chat-input-row">
-          <input type="text" class="chat-input" id="chat-input" placeholder="Tapez un message…" onkeydown="if(event.key==='Enter')sendChatMsg()">
-          <button class="chat-send" onclick="sendChatMsg()">Envoyer</button>
-        </div>
-      </div>
+      <button class="btn-primary" onclick="navigate('test')" style="padding:10px 20px">Ouvrir Mode Test →</button>
     </div>
   `;
 }
@@ -1336,39 +1355,141 @@ function connectGoogle() {
   window.location.href = `/webhook/f10a-google-oauth?account_id=${accountId}`;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE: MODE TEST
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// Persistent test session state (survives re-renders)
+let testSenderId = 'dashboard_test_' + Date.now().toString(36);
+
+function chatTime() {
+  return new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
+}
+
+function appendBubble(msgs, role, html, time) {
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.innerHTML = `<div class="chat-bubble">${html}</div><div class="chat-time">${time}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function appendTyping(msgs) {
+  const div = document.createElement('div');
+  div.className = 'chat-msg bot chat-typing';
+  div.id = 'chat-typing';
+  div.innerHTML = `<div class="chat-bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function renderTest(container) {
+  container.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">Mode Test</div>
+      <div class="page-subtitle">Simulez une conversation Instagram DM avec le moteur F14</div>
+    </div>
+    <div style="max-width:640px">
+      <div class="chat-wrap">
+        <div class="chat-topbar">
+          <div class="chat-topbar-info">
+            <div class="chat-avatar">💬</div>
+            <div>
+              <div class="chat-contact">Bot Bostaz</div>
+              <div class="chat-contact-sub" id="test-sender-label">session: ${escHtml(testSenderId)}</div>
+            </div>
+          </div>
+          <button class="chat-reset-btn" onclick="resetConversation()">↺ Nouvelle conversation</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-day-sep">Aujourd'hui</div>
+          <div class="chat-msg bot">
+            <div class="chat-bubble">👋 Envoyez un message pour simuler une conversation Instagram DM avec votre bot.</div>
+            <div class="chat-time">${chatTime()}</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" class="chat-input" id="chat-input"
+            placeholder="Tapez un message client…"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMsg()}">
+          <button class="chat-send" id="chat-send-btn" onclick="sendChatMsg()">Envoyer</button>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--text3);font-family:var(--mono);line-height:1.6">
+        Webhook: POST /f14-state-machine &nbsp;·&nbsp; sender_id: <span id="test-sender-short">${escHtml(testSenderId)}</span>
+      </div>
+    </div>
+  `;
+}
+
+function resetConversation() {
+  testSenderId = 'dashboard_test_' + Date.now().toString(36);
+  const lbl = document.getElementById('test-sender-label');
+  const sh  = document.getElementById('test-sender-short');
+  if (lbl) lbl.textContent = 'session: ' + testSenderId;
+  if (sh)  sh.textContent  = testSenderId;
+  const msgs = document.getElementById('chat-messages');
+  if (!msgs) return;
+  msgs.innerHTML = `
+    <div class="chat-day-sep">Nouvelle conversation</div>
+    <div class="chat-msg bot">
+      <div class="chat-bubble">🔄 Conversation réinitialisée. Nouveau sender_id assigné.</div>
+      <div class="chat-time">${chatTime()}</div>
+    </div>
+  `;
+}
+
 async function sendChatMsg() {
   const input = document.getElementById('chat-input');
-  const msg = input.value.trim();
-  if (!msg) return;
-  input.value = '';
-  const msgs = document.getElementById('chat-messages');
+  const btn   = document.getElementById('chat-send-btn');
+  const msgs  = document.getElementById('chat-messages');
+  const msg   = input.value.trim();
+  if (!msg || !msgs) return;
 
-  // Append user bubble
-  msgs.innerHTML += `<div class="chat-msg user"><div class="chat-bubble">${escHtml(msg)}</div></div>`;
-  msgs.innerHTML += `<div class="chat-msg bot" id="chat-loading"><div class="chat-bubble"><span class="spinner"></span></div></div>`;
-  msgs.scrollTop = msgs.scrollHeight;
+  input.value = '';
+  btn.disabled = true;
+
+  const t = chatTime();
+  appendBubble(msgs, 'user', escHtml(msg), t);
+  appendTyping(msgs);
+
+  const payload = {
+    account_id: accountId,
+    sender_id:  testSenderId,
+    message_id: 'test_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+    text:        msg,
+    page_id:    'test'
+  };
 
   try {
-    const res = await fetch(`${N8N_BASE}/f14-dm-engine`, {
+    const res = await fetch('https://samy30.app.n8n.cloud/webhook/f14-state-machine', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account_id: accountId, sender_id: 'dashboard-test', message: msg })
+      body: JSON.stringify(payload)
     });
-    const text = await res.text();
-    let display;
+    const raw = await res.text();
+    document.getElementById('chat-typing')?.remove();
+
+    let reply;
     try {
-      const json = JSON.parse(text);
-      display = `<pre>${escHtml(JSON.stringify(json, null, 2))}</pre>`;
+      const json = JSON.parse(raw);
+      // Try common reply fields
+      reply = json.reply ?? json.text ?? json.message ?? json.response ?? json.output;
+      if (!reply && Array.isArray(json)) {
+        reply = json[0]?.reply ?? json[0]?.text ?? json[0]?.message;
+      }
+      if (!reply) reply = `<pre>${escHtml(JSON.stringify(json, null, 2))}</pre>`;
+      else reply = escHtml(reply).replace(/\n/g, '<br>');
     } catch {
-      display = escHtml(text);
+      reply = raw ? escHtml(raw).replace(/\n/g, '<br>') : '(réponse vide)';
     }
-    document.getElementById('chat-loading')?.remove();
-    msgs.innerHTML += `<div class="chat-msg bot"><div class="chat-bubble">${display}</div></div>`;
+    appendBubble(msgs, 'bot', reply, chatTime());
   } catch (e) {
-    document.getElementById('chat-loading')?.remove();
-    msgs.innerHTML += `<div class="chat-msg bot"><div class="chat-bubble" style="color:var(--red)">Erreur: ${escHtml(e.message)}</div></div>`;
+    document.getElementById('chat-typing')?.remove();
+    appendBubble(msgs, 'bot', `<span style="color:var(--red)">Erreur réseau: ${escHtml(e.message)}</span>`, chatTime());
   }
-  msgs.scrollTop = msgs.scrollHeight;
+  btn.disabled = false;
+  input.focus();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
